@@ -3,9 +3,13 @@
 #import "zk-helpers.typ": zk_output_focused
 #import "zk-metadata.typ": checklist-statuses, note-relations, zk_metadata
 
+#import "zk-content.typ": (
+  zk_content_at, zk_content_element, zk_contents, zk_present_nodes, zk_stub,
+)
+#import "zk-focus.typ": zk_present_focus
 #import "zk-graph.typ": (
-  relations, zk-present-zettel, zk_edge, zk_graph, zk_incoming, zk_neighbors,
-  zk_node, zk_observations, zk_observe, zk_outgoing,
+  relations, zk-observation-envelope, zk_edge, zk_graph, zk_incoming,
+  zk_neighbors, zk_node, zk_observations, zk_observe, zk_outgoing,
 )
 
 /// Helper
@@ -18,12 +22,12 @@
   }
 }
 
-/// Render a single, locally registered zettel.
-#let zettel(note: none, body) = zk-present-zettel(
-  note: note,
-  reference-renderer: show-reference,
-  body,
-)
+/// Register one note's compact graph observation and addressable full content.
+#let zettel(note: none, body) = {
+  let observation = zk_observe(note, body)
+  metadata(zk-observation-envelope(observation))
+  zk_content_element(note.id, body)
+}
 
 /// Include one note into the compiled document.
 /// Called automatically by link.typ.

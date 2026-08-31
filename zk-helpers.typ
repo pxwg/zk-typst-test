@@ -1,6 +1,6 @@
 // Standardized PDF output helpers for inspecting Typst-native ZK evaluation.
 
-#import "zk-graph.typ": zk_focus_id, zk_graph, zk_incoming, zk_observations
+#import "zk-graph.typ": zk_incoming
 #import "zk-diagnostics.typ": zk_diagnose_observation
 
 #let zk-output-entry(name, value) = block(
@@ -38,15 +38,18 @@
   ]
 }
 
-/// Query the current document world and render the focused node, its local
-/// edges, graph size, and aggregated outgoing diagnostics.
-#let zk_output_focused() = context {
-  let focus-id = zk_focus_id
+/// Render one selected node, its local edges, graph size, and aggregated
+/// outgoing diagnostics.
+///
+/// - graph (dictionary): A semantic graph.
+/// - observations (array): Local graph observations.
+/// - focus-id (str, none): The selected note identifier.
+/// -> content
+#let zk_output_focused(graph, observations, focus-id) = {
   if focus-id == none {
     return zk_output(error: "zk-focus-id is not set")
   }
 
-  let observations = zk_observations(query(metadata))
   let observation = observations.find(
     item => str(item.node.value.id) == focus-id,
   )
@@ -54,7 +57,6 @@
     return zk_output(error: "focused note observation is missing")
   }
 
-  let graph = zk_graph(observations)
   let report = zk_diagnose_observation(graph, observation)
   let outgoing = observation.edges.map(item => item.value)
   let incoming = zk_incoming(graph, observation.node.value.id)

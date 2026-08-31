@@ -10,3 +10,14 @@
 #zk_knowledge_graph()
 
 #include "link.typ"
+#context {
+  let elements = query(metadata)
+  let observations = zk_observations(elements)
+  let graph = zk_graph(observations)
+  let contents = zk_contents(elements)
+  zk_present_nodes(
+    graph,
+    contents,
+    reference-renderer: show-reference,
+  )
+}

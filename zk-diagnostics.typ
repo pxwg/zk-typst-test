@@ -1,6 +1,5 @@
 // Typst-native diagnostics derived from observed note graph fragments.
 
-#import "zk-graph.typ": zk_focus_id, zk_graph, zk_observations
 #import "zk-metadata.typ": zk_metadata_issues, zk_metadata_lifecycle
 
 #let diagnostic-codes = (
@@ -154,19 +153,25 @@
     .map(value => value.value)
 }
 
-/// Build and emit the focused node's report from the document's observation
-/// metadata. This must be called from a contextual expression.
+/// Build and emit the selected node's report from an already constructed graph
+/// and its local observations.
+///
+/// - graph (dictionary): A semantic graph.
+/// - observations (array): Local graph observations.
+/// - focus-id (str, none): The selected note identifier.
+/// - lifecycle (function): A node lifecycle accessor.
+/// -> content, none
 #let zk_emit_focused_diagnostics(
+  graph,
+  observations,
+  focus-id,
   lifecycle: zk_default_lifecycle,
 ) = {
-  let focus-id = zk_focus_id
   if focus-id != none {
-    let observations = zk_observations(query(metadata))
     let observation = observations.find(
       item => str(item.node.value.id) == focus-id,
     )
     if observation != none {
-      let graph = zk_graph(observations)
       let report = zk_diagnose_observation(
         graph,
         observation,
