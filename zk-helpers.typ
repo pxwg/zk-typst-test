@@ -1,7 +1,7 @@
 // Standardized PDF output helpers for inspecting Typst-native ZK evaluation.
 
 #import "zk-graph.typ": zk_focus_id, zk_graph, zk_incoming, zk_observations
-#import "zk-diagnostics.typ": zk_diagnose_outgoing
+#import "zk-diagnostics.typ": zk_diagnose_observation
 
 #let zk-output-entry(name, value) = block(
   width: 100%,
@@ -55,7 +55,7 @@
   }
 
   let graph = zk_graph(observations)
-  let report = zk_diagnose_outgoing(graph, observation)
+  let report = zk_diagnose_observation(graph, observation)
   let outgoing = observation.edges.map(item => item.value)
   let incoming = zk_incoming(graph, observation.node.value.id)
 

@@ -1,14 +1,12 @@
 #import "../include.typ": *
-#let zk-metadata = zk_register(
+#let zk-metadata = zk_metadata(
   id: "2608310423",
-  metadata: (
-    aliases: (),
-    abstract: "",
-    keywords: (),
-    checklist-status: "none",
-    relation: "archived",
-    relation-target: (),
-  ),
+  aliases: (),
+  abstract: "",
+  keywords: (),
+  checklist-status: checklist-statuses.none_,
+  relation: note-relations.archived,
+  relation-target: (<2608310250>,),
 )
 #show: zettel.with(note: zk-metadata)
 

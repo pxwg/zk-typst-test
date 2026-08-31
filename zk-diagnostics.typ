@@ -1,6 +1,7 @@
 // Typst-native diagnostics derived from observed note graph fragments.
 
 #import "zk-graph.typ": zk_focus_id, zk_graph, zk_observations
+#import "zk-metadata.typ": zk_metadata_issues, zk_metadata_lifecycle
 
 #let diagnostic-codes = (
   missing-target: label("zk.link.missing-target"),
@@ -8,11 +9,8 @@
   archived-target: label("zk.link.target-archived"),
 )
 
-/// Read the default lifecycle policy from otherwise open note metadata.
-#let zk_default_lifecycle(node) = node.metadata.at(
-  "relation",
-  default: "active",
-)
+/// Read a validated lifecycle value from otherwise open note metadata.
+#let zk_default_lifecycle(node) = zk_metadata_lifecycle(node)
 
 #let zk-node-at(graph, id) = graph.nodes.find(node => node.id == id)
 
@@ -110,6 +108,34 @@
   )
 }
 
+/// Attach metadata issues to the note heading that owns their evaluated data.
+/// The structured field/index subject lets a later host recover a finer span.
+#let zk_diagnose_metadata(graph, observation) = {
+  let origin = observation.node.origin
+  zk_metadata_issues(graph, observation.node.value).map(issue => (
+    value: issue,
+    origin: origin,
+  ))
+}
+
+/// Diagnose both the focused note's metadata and its outgoing edge occurrences.
+#let zk_diagnose_observation(
+  graph,
+  observation,
+  lifecycle: zk_default_lifecycle,
+) = {
+  let outgoing = zk_diagnose_outgoing(
+    graph,
+    observation,
+    lifecycle: lifecycle,
+  )
+  (
+    source: outgoing.source,
+    diagnostics: zk_diagnose_metadata(graph, observation)
+      + outgoing.diagnostics,
+  )
+}
+
 #let zk-diagnostic-envelope(report) = (
   protocol: "zk.diagnostics",
   version: 1,
@@ -141,7 +167,7 @@
     )
     if observation != none {
       let graph = zk_graph(observations)
-      let report = zk_diagnose_outgoing(
+      let report = zk_diagnose_observation(
         graph,
         observation,
         lifecycle: lifecycle,
