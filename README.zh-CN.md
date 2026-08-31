@@ -2,6 +2,11 @@
 
 # 概念验证：Typst-native Zettelkasten Note System
 
+<p align="center">
+  <img src="assets/knowledge-graph.svg" alt="由 Typst 原生构建的知识图谱" width="820">
+</p>
+<p align="center"><em>知识图谱，由 Typst 原生构建。</em></p>
+
 使用 Typst 求值 Zettelkasten 笔记系统。
 
 ## 动机

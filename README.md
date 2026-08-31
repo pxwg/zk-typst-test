@@ -2,6 +2,11 @@
 
 # Proof of Concept: A Typst-native Zettelkasten Note System
 
+<p align="center">
+  <img src="assets/knowledge-graph.svg" alt="A Typst-native knowledge graph" width="820">
+</p>
+<p align="center"><em>A knowledge graph, built natively in Typst.</em></p>
+
 Evaluate a Zettelkasten note system with Typst.
 
 ## Motivation
