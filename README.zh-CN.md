@@ -27,7 +27,7 @@
 
 - [x] Graph 抽象，以及 Node、Edge 与 Observation 的描述
 - [x] Missing/Legacy/Archived diagnostics：已经在 Typst 中生成无副作用的 diagnostic values；后续由 LSP handler 恢复 span 并发布到编辑器
-- [ ] Native 的懒加载笔记库，在保证 Tinymist 补全、跳转等功能正常工作的前提下减少内存占用
+- [x] Native 的懒加载笔记库，在保证 Tinymist 补全、跳转等功能正常工作的前提下减少内存占用
 - [ ] 优化类型安全 API，提高 metadata 的编辑体验
 - [ ] 复现原有的全局语义推导逻辑
   - [ ] 任务追踪计算 (`zk-lsp reconcile`) 

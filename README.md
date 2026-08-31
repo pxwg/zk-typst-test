@@ -27,7 +27,7 @@ This project is a proof of concept investigating whether Typst can perform graph
 
 - [x] Graph abstraction and representations of Node, Edge, and Observation
 - [x] Missing/Legacy/Archived diagnostics: Typst now produces side-effect-free diagnostic values; a later LSP handler will recover spans and publish them to the editor
-- [ ] Native lazy loading for the note library, reducing memory use while preserving Tinymist completion and navigation
+- [x] Native lazy loading for the note library, reducing memory use while preserving Tinymist completion and navigation
 - [ ] Improve the type-safe API and metadata editing experience
 - [ ] Reproduce the original global semantic inference
   - [ ] Task tracking (`zk-lsp reconcile`)
