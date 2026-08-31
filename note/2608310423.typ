@@ -6,7 +6,7 @@
     abstract: "",
     keywords: (),
     checklist-status: "none",
-    relation: "active",
+    relation: "archived",
     relation-target: (),
   ),
 )
