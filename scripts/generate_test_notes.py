@@ -55,7 +55,7 @@ def main() -> None:
 
     link = """#import "include.typ": *
 // Auto-generated test resource manifest — do not edit manually.
-// Run scripts/generate_test_notes.py to rebuild.
+// Run scripts/generate_test_notes.py --manifest-only to rebuild.
 
 """ + "\n".join(entries) + "\n"
     (ROOT / "link.typ").write_text(link)

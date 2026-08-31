@@ -5,5 +5,8 @@
 // Edit *this* file freely; do not edit link.typ by hand.
 
 #import "include.typ": *
+#import "zk-graph-view.typ": zk_knowledge_graph
+
+#zk_knowledge_graph()
 
 #include "link.typ"
