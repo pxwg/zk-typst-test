@@ -1,6 +1,5 @@
 #import "../include.typ": *
 #let zk-metadata = zk_metadata(
-  id: "2608310250",
   aliases: (),
   abstract: "",
   keywords: ("hello", "typst", "man"),
@@ -9,7 +8,7 @@
   relation-target: (),
 )
 
-#show: zettel.with(note: zk-metadata)
+#show: zettel.with(metadata: zk-metadata)
 
 = Hello, world! <2608310250>
 

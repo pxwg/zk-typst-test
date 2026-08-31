@@ -1,7 +1,5 @@
 // Closed metadata vocabulary, construction, and validation.
 
-#import "graph.typ": zk_register
-
 /// Supported checklist states. `none_` is named with a suffix because `none`
 /// is a reserved Typst value.
 #let checklist-statuses = (
@@ -28,19 +26,21 @@
   missing-relation-target: label("zk.metadata.relation-target-missing"),
 )
 
-/// Construct registered note metadata while keeping additional fields open.
+/// Construct a note metadata payload while keeping additional fields open.
 #let zk_metadata(
-  id: none,
   checklist-status: checklist-statuses.none_,
   relation: note-relations.active,
   relation-target: (),
   ..metadata,
 ) = {
   let values = metadata.named()
+  if "id" in values {
+    panic("note ID is defined by the labelled heading, not by metadata")
+  }
   values.insert("checklist-status", checklist-status)
   values.insert("relation", relation)
   values.insert("relation-target", relation-target)
-  zk_register(id: id, metadata: values)
+  values
 }
 
 /// Return a lifecycle value that downstream semantic rules can safely consume.

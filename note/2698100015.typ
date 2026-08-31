@@ -1,7 +1,6 @@
 #import "../include.typ": *
 // Generated knowledge-graph architecture fixture.
 #let zk-metadata = zk_metadata(
-  id: "2698100015",
   aliases: (),
   abstract: "Synthetic architecture fixture for Future Directions.",
   keywords: ("graph-fixture", "architecture-test"),
@@ -10,7 +9,7 @@
   relation-target: (),
 )
 
-#show: zettel.with(note: zk-metadata)
+#show: zettel.with(metadata: zk-metadata)
 
 = Future Directions <2698100015>
 

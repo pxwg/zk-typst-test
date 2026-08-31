@@ -1,7 +1,6 @@
 #import "../include.typ": *
 // Generated knowledge-graph architecture fixture.
 #let zk-metadata = zk_metadata(
-  id: "2698100004",
   aliases: (),
   abstract: "Synthetic architecture fixture for Terminology Map.",
   keywords: ("graph-fixture", "architecture-test"),
@@ -10,7 +9,7 @@
   relation-target: (),
 )
 
-#show: zettel.with(note: zk-metadata)
+#show: zettel.with(metadata: zk-metadata)
 
 = Terminology Map <2698100004>
 

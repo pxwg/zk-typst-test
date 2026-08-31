@@ -1,7 +1,6 @@
 #import "../include.typ": *
 // Generated knowledge-graph architecture fixture.
 #let zk-metadata = zk_metadata(
-  id: "2698100017",
   aliases: (),
   abstract: "Synthetic architecture fixture for Orphan Fragment.",
   keywords: ("graph-fixture", "architecture-test"),
@@ -10,7 +9,7 @@
   relation-target: (),
 )
 
-#show: zettel.with(note: zk-metadata)
+#show: zettel.with(metadata: zk-metadata)
 
 = Orphan Fragment <2698100017>
 

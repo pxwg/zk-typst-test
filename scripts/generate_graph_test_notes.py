@@ -115,7 +115,6 @@ def note_source(
     return f'''#import "../include.typ": *
 {GENERATED_MARKER}
 #let zk-metadata = zk_metadata(
-  id: "{current_id}",
   aliases: (),
   abstract: "Synthetic architecture fixture for {title}.",
   keywords: ("graph-fixture", "architecture-test"),
@@ -124,7 +123,7 @@ def note_source(
   relation-target: (),
 )
 
-#show: zettel.with(note: zk-metadata)
+#show: zettel.with(metadata: zk-metadata)
 
 = {title} <{current_id}>
 

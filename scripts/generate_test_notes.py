@@ -14,18 +14,15 @@ GENERATED_MARKER = "// Generated focus stress-test note."
 def note_source(note_id: str, index: int, next_id: str) -> str:
     return f'''#import "../include.typ": *
 {GENERATED_MARKER}
-#let zk-metadata = zk_register(
-  id: "{note_id}",
-  metadata: (
-    aliases: (),
-    abstract: "Synthetic note {index + 1} for the focused-document stress test.",
-    keywords: ("focus", "stress-test"),
-    checklist-status: "none",
-    relation: "active",
-    relation-target: (),
-  ),
+#let zk-metadata = zk_metadata(
+  aliases: (),
+  abstract: "Synthetic note {index + 1} for the focused-document stress test.",
+  keywords: ("focus", "stress-test"),
+  checklist-status: checklist-statuses.none_,
+  relation: note-relations.active,
+  relation-target: (),
 )
-#show: zettel.with(note: zk-metadata)
+#show: zettel.with(metadata: zk-metadata)
 
 = Synthetic Note {index + 1:03d} <{note_id}>
 

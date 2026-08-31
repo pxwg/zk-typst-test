@@ -2,6 +2,7 @@
 #import "zk/diagnostics.typ": zk_emit_focused_diagnostics
 #import "zk/helpers.typ": zk_output_focused
 #import "zk/metadata.typ": checklist-statuses, note-relations, zk_metadata
+#import "zk/note.typ": zk_note_registration
 
 #import "zk/content.typ": (
   zk_content_at, zk_content_element, zk_contents, zk_present_nodes, zk_stub,
@@ -22,10 +23,13 @@
   }
 }
 
+#let zk-metadata-element = metadata
+
 /// Register one note's compact graph observation and addressable full content.
-#let zettel(note: none, body) = {
+#let zettel(metadata: (:), body) = {
+  let note = zk_note_registration(metadata, body)
   let observation = zk_observe(note, body)
-  metadata(zk-observation-envelope(observation))
+  zk-metadata-element(zk-observation-envelope(observation))
   zk_content_element(note.id, body)
 }
 
