@@ -2,6 +2,10 @@
 
 #let zk-focus-input = sys.inputs.at("zk-focus-id", default: none)
 #let zk-focus-file = sys.inputs.at("zk-focus-file", default: none)
+
+/// Resolve the currently selected note ID from the instance inputs.
+///
+/// -> str, none
 #let zk_focus_id = if zk-focus-input != none {
   zk-focus-input
 } else if zk-focus-file != none {
@@ -13,6 +17,8 @@
 
 /// Built-in relation identifiers. Values are unattached labels, so they do not
 /// enter the document label completion namespace.
+///
+/// -> dictionary
 #let relations = (
   ref: label("zk.ref"),
 )
@@ -27,7 +33,11 @@
   }
 }
 
-/// Register locally evaluated note metadata.
+/// Register locally evaluated note metadata as an ID and metadata dictionary.
+///
+/// - id (str, label): A ten-digit note identifier.
+/// - metadata (dictionary): The note's open metadata payload.
+/// -> dictionary
 #let zk_register(id: none, metadata: (:)) = {
   if type(metadata) != dictionary {
     panic("note metadata must be a dictionary")
@@ -35,7 +45,12 @@
   (id: zk-note-id(id), metadata: metadata)
 }
 
-/// Construct a semantic note node.
+/// Construct a semantic note node with `id`, `title`, and `metadata` fields.
+///
+/// - id (str, label): A ten-digit note identifier.
+/// - title (content): The evaluated note title.
+/// - metadata (dictionary): The note's open metadata payload.
+/// -> dictionary
 #let zk_node(id: none, title: none, metadata: (:)) = {
   let id = zk-note-id(id)
   if type(title) != content {
@@ -47,7 +62,13 @@
   (id: id, title: title, metadata: metadata)
 }
 
-/// Construct one directed edge occurrence in the semantic multigraph.
+/// Construct one directed edge occurrence with `source`, `relation`, and
+/// `target` fields in the semantic multigraph.
+///
+/// - source (str, label): The source note identifier.
+/// - relation (label): The semantic relation identifier.
+/// - target (str, label): The target note identifier.
+/// -> dictionary
 #let zk_edge(source: none, relation: none, target: none) = {
   let source = zk-note-id(source)
   let target = zk-note-id(target)
@@ -58,6 +79,10 @@
 }
 
 /// Pair a semantic value with the evaluated content that produced it.
+///
+/// - value (any): The observed semantic value.
+/// - origin (content): The evaluated content that produced the value.
+/// -> dictionary
 #let zk_observed(value, origin) = {
   if type(origin) != content {
     panic("observation origin must be content")
@@ -85,6 +110,10 @@
 }
 
 /// Return the original heading labelled with the registered note ID.
+///
+/// - note (dictionary): Registered note metadata.
+/// - body (content): The evaluated note body.
+/// -> content
 #let zk-extract-note-heading(note, body) = {
   let headings = zk-note-headings(note, body)
   if headings.len() != 1 {
@@ -98,7 +127,11 @@
   headings.first()
 }
 
-/// Keep the world usable when a non-focused note has a malformed heading.
+/// Return the labelled note heading or a deterministic ID-based fallback.
+///
+/// - note (dictionary): Registered note metadata.
+/// - body (content): The evaluated note body.
+/// -> content
 #let zk-note-heading-or-fallback(note, body) = {
   let headings = zk-note-headings(note, body)
   if headings.len() == 1 {
@@ -138,6 +171,11 @@
 
 /// Observe one note as a local graph fragment. Parallel refs remain parallel
 /// edge observations and retain their original evaluated RefElem as origin.
+///
+/// - note (dictionary): Registered note metadata.
+/// - body (content): The evaluated note body.
+/// - strict (bool): Whether the note must contain exactly one labelled heading.
+/// -> dictionary
 #let zk_observe(note, body, strict: true) = {
   let heading = if strict {
     zk-extract-note-heading(note, body)
@@ -164,6 +202,9 @@
 }
 
 /// Wrap an observation only at the document-query transport boundary.
+///
+/// - observation (dictionary): A local graph observation.
+/// -> dictionary
 #let zk-observation-envelope(observation) = (
   protocol: "zk.observe",
   version: 1,
@@ -171,6 +212,9 @@
 )
 
 /// Select observation values from queried metadata elements.
+///
+/// - elements (array): Queried metadata elements.
+/// -> array
 #let zk_observations(elements) = {
   let values = elements.map(element => element.fields().value)
   values
@@ -182,7 +226,11 @@
     .map(value => value.value)
 }
 
-/// Build the pure semantic directed multigraph from note observations.
+/// Build the pure semantic directed multigraph from note observations. The
+/// returned dictionary contains compact `nodes` and `edges` arrays.
+///
+/// - observations (array): Local graph observations.
+/// -> dictionary
 #let zk_graph(observations) = (
   nodes: observations.map(observation => observation.node.value),
   edges: observations.fold(
@@ -191,16 +239,31 @@
   ),
 )
 
+/// Return all outgoing edge occurrences for one node.
+///
+/// - graph (dictionary): A semantic graph.
+/// - id (str, label): The source note identifier.
+/// -> array
 #let zk_outgoing(graph, id) = {
   let id = zk-note-id(id)
   graph.edges.filter(edge => edge.source == id)
 }
 
+/// Return all incoming edge occurrences for one node.
+///
+/// - graph (dictionary): A semantic graph.
+/// - id (str, label): The target note identifier.
+/// -> array
 #let zk_incoming(graph, id) = {
   let id = zk-note-id(id)
   graph.edges.filter(edge => edge.target == id)
 }
 
+/// Return the deduplicated targets of one node's outgoing edges.
+///
+/// - graph (dictionary): A semantic graph.
+/// - id (str, label): The source note identifier.
+/// -> array
 #let zk_neighbors(graph, id) = {
   let outgoing = zk_outgoing(graph, id)
   outgoing.map(edge => edge.target).dedup()
@@ -209,6 +272,11 @@
 /// Present one fully observed note. The focused note keeps its body; every
 /// other note keeps only a hidden heading stub, while still emitting its full
 /// compact observation metadata.
+///
+/// - note (dictionary): Registered note metadata.
+/// - reference-renderer (function): Renderer for resolved non-note references.
+/// - body (content): The evaluated note body.
+/// -> content
 #let zk-present-zettel(note: none, reference-renderer: it => it, body) = {
   let focused = not zk-focus-enabled or str(note.id) == zk_focus_id
   let observation = zk_observe(note, body, strict: focused)
