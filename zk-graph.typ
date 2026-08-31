@@ -1,7 +1,15 @@
 // Typst-native semantic graph model, observation, and focused presentation.
 
-#let zk-focus-id = sys.inputs.at("zk-focus-id", default: none)
-#let zk-focus-enabled = zk-focus-id != none
+#let zk-focus-input = sys.inputs.at("zk-focus-id", default: none)
+#let zk-focus-file = sys.inputs.at("zk-focus-file", default: none)
+#let zk_focus_id = if zk-focus-input != none {
+  zk-focus-input
+} else if zk-focus-file != none {
+  json(zk-focus-file).id
+} else {
+  none
+}
+#let zk-focus-enabled = zk_focus_id != none
 
 /// Built-in relation identifiers. Values are unattached labels, so they do not
 /// enter the document label completion namespace.
@@ -202,7 +210,7 @@
 /// other note keeps only a hidden heading stub, while still emitting its full
 /// compact observation metadata.
 #let zk-present-zettel(note: none, reference-renderer: it => it, body) = {
-  let focused = not zk-focus-enabled or str(note.id) == zk-focus-id
+  let focused = not zk-focus-enabled or str(note.id) == zk_focus_id
   let observation = zk_observe(note, body, strict: focused)
   let observation-element = metadata(zk-observation-envelope(observation))
 

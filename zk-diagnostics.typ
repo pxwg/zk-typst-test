@@ -1,6 +1,6 @@
 // Typst-native diagnostics derived from observed note graph fragments.
 
-#import "zk-graph.typ": zk_graph, zk_observations
+#import "zk-graph.typ": zk_focus_id, zk_graph, zk_observations
 
 #let diagnostic-codes = (
   missing-target: label("zk.link.missing-target"),
@@ -133,7 +133,7 @@
 #let zk_emit_focused_diagnostics(
   lifecycle: zk_default_lifecycle,
 ) = {
-  let focus-id = sys.inputs.at("zk-focus-id", default: none)
+  let focus-id = zk_focus_id
   if focus-id != none {
     let observations = zk_observations(query(metadata))
     let observation = observations.find(

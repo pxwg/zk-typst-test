@@ -1,5 +1,7 @@
 // zk-lsp include — extend with your own imports and styling
 #import "zk-diagnostics.typ": zk_emit_focused_diagnostics
+#import "zk-helpers.typ": zk_output_focused
+
 #import "zk-graph.typ": (
   relations, zk-present-zettel, zk_edge, zk_graph, zk_incoming, zk_neighbors,
   zk_node, zk_observations, zk_observe, zk_outgoing, zk_register,
