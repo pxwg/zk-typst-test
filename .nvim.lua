@@ -1,5 +1,11 @@
 local source = debug.getinfo(1, "S").source
 local root = vim.fs.dirname(vim.fs.normalize(source:sub(2)))
+local project_runtime = vim.fs.joinpath(root, ".nvim")
+if not vim.list_contains(vim.opt.runtimepath:get(), project_runtime) then
+  vim.opt.runtimepath:append(project_runtime)
+end
+-- Re-resolve Tinymist after adding the project-local LSP configuration.
+vim.lsp.config("tinymist", {})
 local note_root = vim.fs.joinpath(root, "note")
 local focus_main = vim.fs.joinpath(root, "focus.typ")
 local focus_dir = vim.fs.joinpath(root, ".zk-lsp")

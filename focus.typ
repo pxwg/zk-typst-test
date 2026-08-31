@@ -6,6 +6,7 @@
 #import "zk/focus.typ": zk_focus_id, zk_present_focus
 #import "zk/graph.typ": zk_graph, zk_observations
 #import "zk/helpers.typ": zk_output_focused
+#import "zk/hover.typ": zk_emit_hover_cards
 
 #include "link.typ"
 #context {
@@ -14,6 +15,7 @@
   let graph = zk_graph(observations)
   let contents = zk_contents(elements)
 
+  zk_emit_hover_cards(graph)
   zk_present_focus(
     graph,
     contents,
