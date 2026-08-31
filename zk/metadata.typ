@@ -1,6 +1,6 @@
 // Closed metadata vocabulary, construction, and validation.
 
-#import "zk-graph.typ": zk_register
+#import "graph.typ": zk_register
 
 /// Supported checklist states. `none_` is named with a suffix because `none`
 /// is a reserved Typst value.
@@ -68,7 +68,7 @@
 
 /// Validate the closed metadata fields of one graph node.
 ///
-/// The returned values are pure semantic issues. `zk-diagnostics.typ` attaches
+/// The returned values are pure semantic issues. `diagnostics.typ` attaches
 /// their source observation and transports them through the diagnostic pipe.
 #let zk_metadata_issues(graph, node) = {
   let issues = ()

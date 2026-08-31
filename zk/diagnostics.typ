@@ -1,6 +1,6 @@
 // Typst-native diagnostics derived from observed note graph fragments.
 
-#import "zk-metadata.typ": zk_metadata_issues, zk_metadata_lifecycle
+#import "metadata.typ": zk_metadata_issues, zk_metadata_lifecycle
 
 #let diagnostic-codes = (
   missing-target: label("zk.link.missing-target"),

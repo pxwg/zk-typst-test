@@ -1,7 +1,7 @@
 // Obsidian-inspired knowledge graph presentation built on the stable graph API.
 
 #import "@preview/cetz:0.5.2"
-#import "zk-graph.typ": zk_graph, zk_observations
+#import "graph.typ": zk_graph, zk_observations
 
 #let zk-v-add(a, b) = (a.at(0) + b.at(0), a.at(1) + b.at(1))
 #let zk-v-sub(a, b) = (a.at(0) - b.at(0), a.at(1) - b.at(1))

@@ -12,8 +12,8 @@ Keep the scope oriented toward validating this model rather than prematurely bui
 
 ## Stable graph core
 
-- Treat `zk-graph.typ` as a stable, frozen graph core when implementing later zk-lsp features.
+- Treat `zk/graph.typ` as a stable, frozen graph core when implementing later zk-lsp features.
 - Do not modify its Node, Edge, Observation, graph construction, multigraph behavior, provenance handling, or graph query semantics.
 - Implement diagnostics, effects, transports, editor integration, preview/debug output, and other applications in separate modules that consume the existing graph API.
 - Do not add application-specific fields, policies, or special cases to the graph core.
-- If a later feature appears to require changing `zk-graph.typ`, stop before editing it. Explain the missing capability and ask the user for explicit approval to revise this invariant.
+- If a later feature appears to require changing `zk/graph.typ`, stop before editing it. Explain the missing capability and ask the user for explicit approval to revise this invariant.

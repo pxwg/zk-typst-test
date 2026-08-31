@@ -1,7 +1,7 @@
 // Standardized PDF output helpers for inspecting Typst-native ZK evaluation.
 
-#import "zk-graph.typ": zk_incoming
-#import "zk-diagnostics.typ": zk_diagnose_observation
+#import "graph.typ": zk_incoming
+#import "diagnostics.typ": zk_diagnose_observation
 
 #let zk-output-entry(name, value) = block(
   width: 100%,

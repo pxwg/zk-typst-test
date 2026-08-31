@@ -1,6 +1,6 @@
 // Focus selection as one addressable-content expansion policy.
 
-#import "zk-content.typ": zk_present_nodes
+#import "content.typ": zk_present_nodes
 
 #let zk-focus-input = sys.inputs.at("zk-focus-id", default: none)
 #let zk-focus-file = sys.inputs.at("zk-focus-file", default: none)
