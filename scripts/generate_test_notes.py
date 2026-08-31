@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Generate a large local-note corpus and rebuild link.typ for focus testing."""
 
+import argparse
 from pathlib import Path
 
 COUNT = 600
@@ -34,14 +35,18 @@ It links to @{next_id}, forming one cycle through the synthetic corpus.
 
 
 def main() -> None:
-    NOTE_DIR.mkdir(exist_ok=True)
-    ids = [str(FIRST_ID + index) for index in range(COUNT)]
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--manifest-only", action="store_true")
+    args = parser.parse_args()
 
-    for index, note_id in enumerate(ids):
-        path = NOTE_DIR / f"{note_id}.typ"
-        if path.exists() and GENERATED_MARKER not in path.read_text():
-            raise SystemExit(f"refusing to overwrite non-generated note: {path}")
-        path.write_text(note_source(note_id, index, ids[(index + 1) % COUNT]))
+    NOTE_DIR.mkdir(exist_ok=True)
+    if not args.manifest_only:
+        ids = [str(FIRST_ID + index) for index in range(COUNT)]
+        for index, note_id in enumerate(ids):
+            path = NOTE_DIR / f"{note_id}.typ"
+            if path.exists() and GENERATED_MARKER not in path.read_text():
+                raise SystemExit(f"refusing to overwrite non-generated note: {path}")
+            path.write_text(note_source(note_id, index, ids[(index + 1) % COUNT]))
 
     entries = []
     for path in sorted(NOTE_DIR.glob("[0-9]" * 10 + ".typ")):
@@ -54,7 +59,8 @@ def main() -> None:
 
 """ + "\n".join(entries) + "\n"
     (ROOT / "link.typ").write_text(link)
-    print(f"generated {COUNT} notes; link.typ now contains {len(entries)} resources")
+    action = "rebuilt manifest" if args.manifest_only else f"generated {COUNT} notes"
+    print(f"{action}; link.typ now contains {len(entries)} resources")
 
 
 if __name__ == "__main__":
