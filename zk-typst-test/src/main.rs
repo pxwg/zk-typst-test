@@ -16,6 +16,7 @@ use typst::foundations::{Dict, Value};
 
 use crate::effect::{EffectRunner, collect_effects};
 use crate::evaluation::evaluate;
+use crate::handlers::code_actions::{CodeActionSink, CodeActionsHandler};
 use crate::handlers::publish_diagnostics::{DiagnosticPublisher, PublishDiagnosticsHandler};
 use crate::server::Backend;
 use crate::world::ProjectWorld;
@@ -64,5 +65,6 @@ async fn run_once(focus_id: Option<String>) -> Result<()> {
 
     let mut runner = EffectRunner::default();
     runner.register(PublishDiagnosticsHandler::new(Arc::new(StdoutPublisher)))?;
+    runner.register(CodeActionsHandler::all(CodeActionSink::default()))?;
     runner.run(&effects, &evaluation).await
 }

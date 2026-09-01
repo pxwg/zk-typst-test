@@ -12,6 +12,7 @@ use typst::foundations::{Dict, Value};
 
 use crate::effect::{EffectRunner, collect_effects};
 use crate::evaluation::evaluate;
+use crate::handlers::code_actions::{CodeActionSink, CodeActionsHandler};
 use crate::handlers::publish_diagnostics::{DiagnosticPublisher, PublishDiagnosticsHandler};
 use crate::world::ProjectWorld;
 
@@ -75,7 +76,44 @@ impl Backend {
         });
         let mut runner = EffectRunner::default();
         runner.register(PublishDiagnosticsHandler::new(publisher))?;
+        runner.register(CodeActionsHandler::all(CodeActionSink::default()))?;
         runner.run(&effects, &evaluation).await
+    }
+
+    async fn code_actions_inner(
+        &self,
+        params: CodeActionParams,
+    ) -> Result<Vec<CodeActionOrCommand>> {
+        let uri = params.text_document.uri;
+        let path = uri
+            .to_file_path()
+            .map_err(|_| anyhow::anyhow!("document URI is not a file: {uri}"))?;
+        let Some(focus_id) = note_id(&path) else {
+            return Ok(Vec::new());
+        };
+        let snapshot = self.editor_snapshot(&uri).await?;
+
+        let mut inputs = Dict::new();
+        inputs.insert("zk-focus-id".into(), Value::Str(focus_id.into()));
+        let world = ProjectWorld::new(&self.root, "focus.typ", inputs, snapshot.overlays)?;
+        let evaluation = evaluate(world)?;
+        let effects = collect_effects(&evaluation)?;
+
+        let sink = CodeActionSink::default();
+        let publisher = Arc::new(ClientPublisher {
+            client: self.client.clone(),
+            version: snapshot.document_version,
+        });
+        let mut runner = EffectRunner::default();
+        runner.register(PublishDiagnosticsHandler::new(publisher))?;
+        runner.register(CodeActionsHandler::for_request(
+            sink.clone(),
+            uri,
+            params.range,
+            params.context.only,
+        ))?;
+        runner.run(&effects, &evaluation).await?;
+        Ok(sink.take())
     }
 }
 
@@ -137,6 +175,13 @@ impl LanguageServer for Backend {
                         ..TextDocumentSyncOptions::default()
                     },
                 )),
+                code_action_provider: Some(CodeActionProviderCapability::Options(
+                    CodeActionOptions {
+                        code_action_kinds: Some(vec![CodeActionKind::QUICKFIX]),
+                        resolve_provider: Some(false),
+                        ..CodeActionOptions::default()
+                    },
+                )),
                 ..ServerCapabilities::default()
             },
             server_info: Some(ServerInfo {
@@ -154,6 +199,21 @@ impl LanguageServer for Backend {
 
     async fn shutdown(&self) -> LspResult<()> {
         Ok(())
+    }
+
+    async fn code_action(&self, params: CodeActionParams) -> LspResult<Option<CodeActionResponse>> {
+        match self.code_actions_inner(params).await {
+            Ok(actions) => Ok(Some(actions)),
+            Err(error) => {
+                self.client
+                    .log_message(
+                        MessageType::ERROR,
+                        format!("zk-typst-test code actions: {error:#}"),
+                    )
+                    .await;
+                Err(tower_lsp::jsonrpc::Error::internal_error())
+            }
+        }
     }
 
     async fn did_open(&self, params: DidOpenTextDocumentParams) {

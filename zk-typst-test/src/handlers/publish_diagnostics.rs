@@ -64,7 +64,7 @@ impl EffectHandler for PublishDiagnosticsHandler {
     }
 }
 
-fn decode_diagnostic(
+pub(crate) fn decode_diagnostic(
     value: &Value,
     document_id: FileId,
     evaluation: &Evaluation,
@@ -105,7 +105,7 @@ fn decode_diagnostic(
     })
 }
 
-fn span_range(origin: &Content, evaluation: &Evaluation) -> Result<Range> {
+pub(crate) fn span_range(origin: &Content, evaluation: &Evaluation) -> Result<Range> {
     let span = origin.span();
     let id = span.id().context("content has no source file")?;
     let bytes = evaluation
@@ -218,7 +218,7 @@ fn decode_tags(value: &Value) -> Result<Vec<DiagnosticTag>> {
         .collect()
 }
 
-fn typst_value_to_json(value: &Value) -> Result<JsonValue> {
+pub(crate) fn typst_value_to_json(value: &Value) -> Result<JsonValue> {
     Ok(match value {
         Value::None => JsonValue::Null,
         Value::Bool(value) => JsonValue::Bool(*value),

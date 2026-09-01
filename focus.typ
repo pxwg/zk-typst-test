@@ -40,28 +40,24 @@
     )
   }
 
-  // NOTE: remove it once the Rust runtime registers the
-  // lsp.code-actions handler and can safely consume this announcement.
-  if sys.inputs.at("zk-code-actions", default: "false") == "true" {
-    for report in zk_quick_fix_reports(graph, observations) {
-      let actions = report.actions.map(action => lsp.code-action(
-        applies-to: action.applies-to,
-        title: action.title,
-        kind: "quickfix",
-        diagnostics: (),
-        edit: lsp.workspace-edit(edits: (
-          lsp.text-edit(
-            origin: action.applies-to,
-            new-text: action.new-text,
-          ),
-        )),
-        data: action.data,
-      ))
-      lsp.offer-code-actions(
-        document: report.document,
-        actions: actions,
-      )
-    }
+  for report in zk_quick_fix_reports(graph, observations) {
+    let actions = report.actions.map(action => lsp.code-action(
+      applies-to: action.applies-to,
+      title: action.title,
+      kind: "quickfix",
+      diagnostics: (),
+      edit: lsp.workspace-edit(edits: (
+        lsp.text-edit(
+          origin: action.applies-to,
+          new-text: action.new-text,
+        ),
+      )),
+      data: action.data,
+    ))
+    lsp.offer-code-actions(
+      document: report.document,
+      actions: actions,
+    )
   }
   if sys.inputs.at("zk-repl", default: "false") == "true" {
     zk_output_focused(graph, observations, zk_focus_id)
