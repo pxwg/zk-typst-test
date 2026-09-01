@@ -1,6 +1,6 @@
 // zk-lsp include — extend with your own imports and styling
-#import "zk/diagnostics.typ": zk_emit_focused_diagnostics
 #import "zk/helpers.typ": zk_output_focused
+#import "zk/lsp.typ" as lsp
 #import "zk/metadata.typ": checklist-statuses, note-relations, zk_metadata
 #import "zk/note.typ": zk_note_registration
 

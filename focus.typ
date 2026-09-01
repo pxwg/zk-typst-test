@@ -2,11 +2,12 @@
 // instance-local `zk-focus-id` input; all other graph nodes become stubs.
 #import "include.typ": show-reference
 #import "zk/content.typ": zk_contents
-#import "zk/diagnostics.typ": zk_emit_focused_diagnostics
+#import "zk/diagnostics.typ": zk_diagnose_focused
 #import "zk/focus.typ": zk_focus_id, zk_present_focus
 #import "zk/graph.typ": zk_graph, zk_observations
 #import "zk/helpers.typ": zk_output_focused
 #import "zk/hover.typ": zk_emit_hover_cards
+#import "zk/lsp.typ" as lsp
 
 #include "link.typ"
 #context {
@@ -22,7 +23,21 @@
     zk_focus_id,
     reference-renderer: show-reference,
   )
-  zk_emit_focused_diagnostics(graph, observations, zk_focus_id)
+  let report = zk_diagnose_focused(graph, observations, zk_focus_id)
+  if report != none {
+    let diagnostics = report.diagnostics.map(item => lsp.diagnostic(
+      origin: item.origin,
+      severity: lsp.severity.at(item.value.severity),
+      code: item.value.code,
+      source: "zk-lsp",
+      message: item.value.message,
+      data: item.value,
+    ))
+    lsp.publish-diagnostics(
+      document: report.document,
+      diagnostics: diagnostics,
+    )
+  }
   if sys.inputs.at("zk-repl", default: "false") == "true" {
     zk_output_focused(graph, observations, zk_focus_id)
   }

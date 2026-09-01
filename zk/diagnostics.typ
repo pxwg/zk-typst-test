@@ -8,15 +8,30 @@
   archived-target: label("zk.link.target-archived"),
 )
 
+#let diagnostic-severities = (
+  error: "error",
+  warning: "warning",
+  information: "information",
+  hint: "hint",
+)
+
 /// Read a validated lifecycle value from otherwise open note metadata.
 #let zk_default_lifecycle(node) = zk_metadata_lifecycle(node)
 
 #let zk-node-at(graph, id) = graph.nodes.find(node => node.id == id)
 
 /// Construct one semantic diagnostic about an edge occurrence.
-#let zk_diagnostic(code: none, message: none, edge: none) = {
+#let zk_diagnostic(
+  code: none,
+  severity: none,
+  message: none,
+  edge: none,
+) = {
   if type(code) != label {
     panic("diagnostic code must be a label")
+  }
+  if severity not in diagnostic-severities.values() {
+    panic("diagnostic severity must be a known semantic severity")
   }
   if type(message) != str {
     panic("diagnostic message must be a string")
@@ -24,7 +39,7 @@
   if type(edge) != dictionary {
     panic("diagnostic edge must be a dictionary")
   }
-  (code: code, message: message, edge: edge)
+  (code: code, severity: severity, message: message, edge: edge)
 }
 
 /// Preserve the exact evaluated ref content that produced a diagnostic.
@@ -35,10 +50,11 @@
   (value: value, origin: origin)
 }
 
-#let zk-edge-diagnostic(code, message, observed-edge) = {
+#let zk-edge-diagnostic(code, severity, message, observed-edge) = {
   zk_observed_diagnostic(
     zk_diagnostic(
       code: code,
+      severity: severity,
       message: message,
       edge: observed-edge.value,
     ),
@@ -60,6 +76,7 @@
   if target == none {
     zk-edge-diagnostic(
       diagnostic-codes.missing-target,
+      diagnostic-severities.error,
       "Link target " + target-id + " is missing.",
       observed-edge,
     )
@@ -68,12 +85,14 @@
     if state == "legacy" {
       zk-edge-diagnostic(
         diagnostic-codes.legacy-target,
+        diagnostic-severities.information,
         "Link target " + target-id + " is legacy.",
         observed-edge,
       )
     } else if state == "archived" {
       zk-edge-diagnostic(
         diagnostic-codes.archived-target,
+        diagnostic-severities.warning,
         "Link target " + target-id + " is archived.",
         observed-edge,
       )
@@ -111,10 +130,10 @@
 /// The structured field/index subject lets a later host recover a finer span.
 #let zk_diagnose_metadata(graph, observation) = {
   let origin = observation.node.origin
-  zk_metadata_issues(graph, observation.node.value).map(issue => (
-    value: issue,
-    origin: origin,
-  ))
+  zk_metadata_issues(graph, observation.node.value).map(issue => {
+    issue.insert("severity", diagnostic-severities.error)
+    (value: issue, origin: origin)
+  })
 }
 
 /// Diagnose both the focused note's metadata and its outgoing edge occurrences.
@@ -135,33 +154,16 @@
   )
 }
 
-#let zk-diagnostic-envelope(report) = (
-  protocol: "zk.diagnostics",
-  version: 1,
-  value: report,
-)
-
-/// Select diagnostic reports from queried metadata elements.
-#let zk_diagnostic_reports(elements) = {
-  let values = elements.map(element => element.fields().value)
-  values
-    .filter(value => (
-      type(value) == dictionary
-        and value.at("protocol", default: none) == "zk.diagnostics"
-        and value.at("version", default: none) == 1
-    ))
-    .map(value => value.value)
-}
-
-/// Build and emit the selected node's report from an already constructed graph
-/// and its local observations.
+/// Diagnose the selected node without choosing a transport or performing an
+/// effect. `document` retains a source-backed anchor even when the diagnostic
+/// array is empty.
 ///
 /// - graph (dictionary): A semantic graph.
 /// - observations (array): Local graph observations.
 /// - focus-id (str, none): The selected note identifier.
 /// - lifecycle (function): A node lifecycle accessor.
-/// -> content, none
-#let zk_emit_focused_diagnostics(
+/// -> dictionary, none
+#let zk_diagnose_focused(
   graph,
   observations,
   focus-id,
@@ -177,7 +179,11 @@
         observation,
         lifecycle: lifecycle,
       )
-      metadata(zk-diagnostic-envelope(report))
+      (
+        document: observation.node.origin,
+        source: report.source,
+        diagnostics: report.diagnostics,
+      )
     }
   }
 }
