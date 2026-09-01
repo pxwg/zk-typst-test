@@ -13,7 +13,7 @@ use typst::foundations::{Dict, Value};
 use crate::effect::{EffectRunner, collect_effects};
 use crate::evaluation::evaluate;
 use crate::handlers::code_actions::{CodeActionSink, CodeActionsHandler};
-use crate::handlers::publish_diagnostics::{DiagnosticPublisher, PublishDiagnosticsHandler};
+use crate::handlers::diagnostics::{DiagnosticPublisher, DiagnosticsHandler};
 use crate::world::ProjectWorld;
 
 #[derive(Clone)]
@@ -75,7 +75,7 @@ impl Backend {
             version: snapshot.document_version,
         });
         let mut runner = EffectRunner::default();
-        runner.register(PublishDiagnosticsHandler::new(publisher))?;
+        runner.register(DiagnosticsHandler::new(publisher))?;
         runner.register(CodeActionsHandler::all(CodeActionSink::default()))?;
         runner.run(&effects, &evaluation).await
     }
@@ -105,7 +105,7 @@ impl Backend {
             version: snapshot.document_version,
         });
         let mut runner = EffectRunner::default();
-        runner.register(PublishDiagnosticsHandler::new(publisher))?;
+        runner.register(DiagnosticsHandler::new(publisher))?;
         runner.register(CodeActionsHandler::for_request(
             sink.clone(),
             uri,

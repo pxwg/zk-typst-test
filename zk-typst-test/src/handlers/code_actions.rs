@@ -12,7 +12,7 @@ use typst::syntax::FileId;
 
 use crate::effect::{EffectAnnouncement, EffectHandler};
 use crate::evaluation::Evaluation;
-use crate::handlers::publish_diagnostics::{decode_diagnostic, span_range, typst_value_to_json};
+use crate::handlers::diagnostics::{decode_diagnostic, span_range, typst_value_to_json};
 
 #[derive(Clone, Default)]
 pub struct CodeActionSink {

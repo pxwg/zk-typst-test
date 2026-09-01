@@ -19,18 +19,18 @@ pub trait DiagnosticPublisher: Send + Sync {
     async fn publish(&self, params: PublishDiagnosticsParams) -> Result<()>;
 }
 
-pub struct PublishDiagnosticsHandler {
+pub struct DiagnosticsHandler {
     publisher: Arc<dyn DiagnosticPublisher>,
 }
 
-impl PublishDiagnosticsHandler {
+impl DiagnosticsHandler {
     pub fn new(publisher: Arc<dyn DiagnosticPublisher>) -> Self {
         Self { publisher }
     }
 }
 
 #[async_trait]
-impl EffectHandler for PublishDiagnosticsHandler {
+impl EffectHandler for DiagnosticsHandler {
     fn kind(&self) -> &'static str {
         "lsp.publish-diagnostics"
     }
