@@ -21,6 +21,11 @@ struct OpenDocument {
     text: String,
 }
 
+struct EditorSnapshot {
+    document_version: i32,
+    overlays: HashMap<PathBuf, String>,
+}
+
 pub struct Backend {
     client: Client,
     root: PathBuf,
@@ -36,37 +41,64 @@ impl Backend {
         }
     }
 
-    async fn evaluate_document(&self, uri: Url, document: OpenDocument) {
-        if let Err(error) = self.evaluate_document_inner(uri.clone(), document).await {
+    async fn evaluate_document(&self, uri: Url) {
+        if let Err(error) = self.evaluate_document_inner(uri.clone()).await {
             self.client
                 .log_message(MessageType::ERROR, format!("zk-typst-test: {error:#}"))
                 .await;
         }
     }
 
-    async fn evaluate_document_inner(&self, uri: Url, document: OpenDocument) -> Result<()> {
+    async fn editor_snapshot(&self, uri: &Url) -> Result<EditorSnapshot> {
+        let documents = self.open_documents.read().await;
+        editor_snapshot_from(&documents, uri)
+    }
+
+    async fn evaluate_document_inner(&self, uri: Url) -> Result<()> {
         let path = uri
             .to_file_path()
             .map_err(|_| anyhow::anyhow!("document URI is not a file: {uri}"))?;
         let Some(focus_id) = note_id(&path) else {
             return Ok(());
         };
+        let snapshot = self.editor_snapshot(&uri).await?;
 
         let mut inputs = Dict::new();
         inputs.insert("zk-focus-id".into(), Value::Str(focus_id.into()));
-        let overlays = HashMap::from([(path, document.text)]);
-        let world = ProjectWorld::new(&self.root, "focus.typ", inputs, overlays)?;
+        let world = ProjectWorld::new(&self.root, "focus.typ", inputs, snapshot.overlays)?;
         let evaluation = evaluate(world)?;
         let effects = collect_effects(&evaluation)?;
 
         let publisher = Arc::new(ClientPublisher {
             client: self.client.clone(),
-            version: document.version,
+            version: snapshot.document_version,
         });
         let mut runner = EffectRunner::default();
         runner.register(PublishDiagnosticsHandler::new(publisher))?;
         runner.run(&effects, &evaluation).await
     }
+}
+
+fn editor_snapshot_from(
+    documents: &HashMap<Url, OpenDocument>,
+    current: &Url,
+) -> Result<EditorSnapshot> {
+    let document_version = documents
+        .get(current)
+        .map(|document| document.version)
+        .ok_or_else(|| anyhow::anyhow!("document is not open: {current}"))?;
+    let overlays = documents
+        .iter()
+        .filter_map(|(uri, document)| {
+            uri.to_file_path()
+                .ok()
+                .map(|path| (path, document.text.clone()))
+        })
+        .collect();
+    Ok(EditorSnapshot {
+        document_version,
+        overlays,
+    })
 }
 
 fn note_id(path: &Path) -> Option<String> {
@@ -132,9 +164,8 @@ impl LanguageServer for Backend {
         self.open_documents
             .write()
             .await
-            .insert(params.text_document.uri.clone(), document.clone());
-        self.evaluate_document(params.text_document.uri, document)
-            .await;
+            .insert(params.text_document.uri.clone(), document);
+        self.evaluate_document(params.text_document.uri).await;
     }
 
     async fn did_change(&self, params: DidChangeTextDocumentParams) {
@@ -148,35 +179,22 @@ impl LanguageServer for Backend {
         self.open_documents
             .write()
             .await
-            .insert(params.text_document.uri.clone(), document.clone());
-        self.evaluate_document(params.text_document.uri, document)
-            .await;
+            .insert(params.text_document.uri.clone(), document);
+        self.evaluate_document(params.text_document.uri).await;
     }
 
     async fn did_save(&self, params: DidSaveTextDocumentParams) {
-        let document = if let Some(text) = params.text {
-            let version = self
+        if let Some(text) = params.text {
+            if let Some(document) = self
                 .open_documents
-                .read()
+                .write()
                 .await
-                .get(&params.text_document.uri)
-                .map(|document| document.version)
-                .unwrap_or_default();
-            OpenDocument { version, text }
-        } else {
-            let Some(document) = self
-                .open_documents
-                .read()
-                .await
-                .get(&params.text_document.uri)
-                .cloned()
-            else {
-                return;
-            };
-            document
-        };
-        self.evaluate_document(params.text_document.uri, document)
-            .await;
+                .get_mut(&params.text_document.uri)
+            {
+                document.text = text;
+            }
+        }
+        self.evaluate_document(params.text_document.uri).await;
     }
 
     async fn did_close(&self, params: DidCloseTextDocumentParams) {
@@ -187,5 +205,45 @@ impl LanguageServer for Backend {
         self.client
             .publish_diagnostics(params.text_document.uri, Vec::new(), None)
             .await;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn editor_snapshot_contains_every_open_file() {
+        let a = Url::from_file_path("/tmp/zk-typst-a.typ").unwrap();
+        let b = Url::from_file_path("/tmp/zk-typst-b.typ").unwrap();
+        let documents = HashMap::from([
+            (
+                a.clone(),
+                OpenDocument {
+                    version: 7,
+                    text: "dirty a".into(),
+                },
+            ),
+            (
+                b,
+                OpenDocument {
+                    version: 3,
+                    text: "dirty b".into(),
+                },
+            ),
+        ]);
+
+        let snapshot = editor_snapshot_from(&documents, &a).unwrap();
+
+        assert_eq!(snapshot.document_version, 7);
+        assert_eq!(snapshot.overlays.len(), 2);
+        assert_eq!(
+            snapshot.overlays[Path::new("/tmp/zk-typst-a.typ")],
+            "dirty a"
+        );
+        assert_eq!(
+            snapshot.overlays[Path::new("/tmp/zk-typst-b.typ")],
+            "dirty b"
+        );
     }
 }
