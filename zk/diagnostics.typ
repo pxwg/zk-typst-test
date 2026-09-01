@@ -154,36 +154,26 @@
   )
 }
 
-/// Diagnose the selected node without choosing a transport or performing an
-/// effect. `document` retains a source-backed anchor even when the diagnostic
-/// array is empty.
+/// Compute one document-scoped diagnostic report for every graph observation.
+/// Empty diagnostic arrays are retained so the host can clear stale results.
 ///
 /// - graph (dictionary): A semantic graph.
 /// - observations (array): Local graph observations.
-/// - focus-id (str, none): The selected note identifier.
 /// - lifecycle (function): A node lifecycle accessor.
-/// -> dictionary, none
-#let zk_diagnose_focused(
+/// -> array
+#let zk_diagnostic_reports(
   graph,
   observations,
-  focus-id,
   lifecycle: zk_default_lifecycle,
-) = {
-  if focus-id != none {
-    let observation = observations.find(
-      item => str(item.node.value.id) == focus-id,
-    )
-    if observation != none {
-      let report = zk_diagnose_observation(
-        graph,
-        observation,
-        lifecycle: lifecycle,
-      )
-      (
-        document: observation.node.origin,
-        source: report.source,
-        diagnostics: report.diagnostics,
-      )
-    }
-  }
-}
+) = observations.map(observation => {
+  let report = zk_diagnose_observation(
+    graph,
+    observation,
+    lifecycle: lifecycle,
+  )
+  (
+    document: observation.node.origin,
+    source: report.source,
+    diagnostics: report.diagnostics,
+  )
+})

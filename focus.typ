@@ -2,7 +2,7 @@
 // instance-local `zk-focus-id` input; all other graph nodes become stubs.
 #import "include.typ": show-reference
 #import "zk/content.typ": zk_contents
-#import "zk/diagnostics.typ": zk_diagnose_focused
+#import "zk/diagnostics.typ": zk_diagnostic_reports
 #import "zk/focus.typ": zk_focus_id, zk_present_focus
 #import "zk/graph.typ": zk_graph, zk_observations
 #import "zk/helpers.typ": zk_output_focused
@@ -24,8 +24,7 @@
     zk_focus_id,
     reference-renderer: show-reference,
   )
-  let report = zk_diagnose_focused(graph, observations, zk_focus_id)
-  if report != none {
+  for report in zk_diagnostic_reports(graph, observations) {
     let diagnostics = report.diagnostics.map(item => lsp.diagnostic(
       origin: item.origin,
       severity: lsp.severity.at(item.value.severity),
