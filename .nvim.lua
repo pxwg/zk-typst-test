@@ -11,7 +11,7 @@ local focus_main = vim.fs.joinpath(root, "focus.typ")
 local focus_dir = vim.fs.joinpath(root, ".zk-lsp")
 local preview_focus_name = "preview-focus-" .. tostring(vim.uv.os_getpid()) .. ".json"
 local preview_focus_file = vim.fs.joinpath(focus_dir, preview_focus_name)
-local preview_focus_input = ".zk-lsp/" .. preview_focus_name
+local preview_focus_input = "../.zk-lsp/" .. preview_focus_name
 local group = vim.api.nvim_create_augroup("test_wiki_tinymist_focus", { clear = true })
 local pinned = {}
 local client_focus = {}
