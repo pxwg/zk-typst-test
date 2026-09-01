@@ -2,6 +2,7 @@
 
 #import "graph.typ": zk_incoming
 #import "diagnostics.typ": zk_diagnose_observation
+#import "quick-fixes.typ": zk_quick_fixes
 
 #let zk-output-entry(name, value) = block(
   width: 100%,
@@ -64,6 +65,7 @@
   zk_output(
     title: [ZK evaluation: #focus-id],
     diagnostics: report,
+    quick-fixes: zk_quick_fixes(graph, observation),
     graph: (
       nodes: graph.nodes.len(),
       edges: graph.edges.len(),
