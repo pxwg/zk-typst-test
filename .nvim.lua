@@ -6,6 +6,8 @@ if not vim.list_contains(vim.opt.runtimepath:get(), project_runtime) then
 end
 -- Re-resolve Tinymist after adding the project-local LSP configuration.
 vim.lsp.config("tinymist", {})
+vim.lsp.config("zk_typst_test", {})
+vim.lsp.enable("zk_typst_test")
 local note_root = vim.fs.joinpath(root, "note")
 local focus_main = vim.fs.joinpath(root, "focus.typ")
 local focus_dir = vim.fs.joinpath(root, ".zk-lsp")
