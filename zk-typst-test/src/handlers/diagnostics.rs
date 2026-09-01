@@ -24,6 +24,8 @@ pub struct DiagnosticsHandler {
 }
 
 impl DiagnosticsHandler {
+    pub const KIND: &'static str = "lsp.publish-diagnostics";
+
     pub fn new(publisher: Arc<dyn DiagnosticPublisher>) -> Self {
         Self { publisher }
     }
@@ -32,7 +34,7 @@ impl DiagnosticsHandler {
 #[async_trait]
 impl EffectHandler for DiagnosticsHandler {
     fn kind(&self) -> &'static str {
-        "lsp.publish-diagnostics"
+        Self::KIND
     }
 
     async fn handle(

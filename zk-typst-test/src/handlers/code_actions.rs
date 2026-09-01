@@ -37,6 +37,8 @@ struct CodeActionRequest {
 }
 
 impl CodeActionsHandler {
+    pub const KIND: &'static str = "lsp.code-actions";
+
     pub fn all(sink: CodeActionSink) -> Self {
         Self {
             sink,
@@ -60,7 +62,7 @@ impl CodeActionsHandler {
 #[async_trait]
 impl EffectHandler for CodeActionsHandler {
     fn kind(&self) -> &'static str {
-        "lsp.code-actions"
+        Self::KIND
     }
 
     async fn handle(

@@ -56,6 +56,26 @@ impl EffectRunner {
         }
         Ok(())
     }
+
+    /// Consume only announcements of one kind. Other evaluated effects remain
+    /// available to consumers with a different execution schedule.
+    pub async fn run_kind(
+        &self,
+        kind: &str,
+        effects: &[EffectAnnouncement],
+        evaluation: &Evaluation,
+    ) -> Result<()> {
+        let handler = self
+            .handlers
+            .get(kind)
+            .ok_or_else(|| anyhow!("no handler registered for effect {kind}"))?;
+        for effect in effects {
+            if effect.kind.resolve().as_str() == kind {
+                handler.handle(effect, evaluation).await?;
+            }
+        }
+        Ok(())
+    }
 }
 
 pub fn collect_effects(evaluation: &Evaluation) -> Result<Vec<EffectAnnouncement>> {

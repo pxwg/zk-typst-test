@@ -2,6 +2,7 @@ mod effect;
 mod evaluation;
 mod handlers;
 mod server;
+mod snapshot;
 mod world;
 
 use std::collections::HashMap;

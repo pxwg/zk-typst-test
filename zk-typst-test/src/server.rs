@@ -14,6 +14,7 @@ use crate::effect::{EffectRunner, collect_effects};
 use crate::evaluation::evaluate;
 use crate::handlers::code_actions::{CodeActionSink, CodeActionsHandler};
 use crate::handlers::diagnostics::{DiagnosticPublisher, DiagnosticsHandler};
+use crate::snapshot::EvaluationSnapshot;
 use crate::world::ProjectWorld;
 
 #[derive(Clone)]
@@ -23,14 +24,15 @@ struct OpenDocument {
 }
 
 struct EditorSnapshot {
-    document_version: i32,
     overlays: HashMap<PathBuf, String>,
+    versions: HashMap<Url, i32>,
 }
 
 pub struct Backend {
     client: Client,
     root: PathBuf,
     open_documents: RwLock<HashMap<Url, OpenDocument>>,
+    latest_evaluation: RwLock<Option<Arc<EvaluationSnapshot>>>,
 }
 
 impl Backend {
@@ -39,6 +41,7 @@ impl Backend {
             client,
             root,
             open_documents: RwLock::new(HashMap::new()),
+            latest_evaluation: RwLock::new(None),
         }
     }
 
@@ -55,6 +58,11 @@ impl Backend {
         editor_snapshot_from(&documents, uri)
     }
 
+    async fn snapshot_is_current(&self, snapshot: &EvaluationSnapshot) -> bool {
+        let documents = self.open_documents.read().await;
+        editor_versions_match(&documents, &snapshot.editor_versions)
+    }
+
     async fn evaluate_document_inner(&self, uri: Url) -> Result<()> {
         let path = uri
             .to_file_path()
@@ -62,22 +70,36 @@ impl Backend {
         let Some(focus_id) = note_id(&path) else {
             return Ok(());
         };
-        let snapshot = self.editor_snapshot(&uri).await?;
+        let editor = self.editor_snapshot(&uri).await?;
 
         let mut inputs = Dict::new();
         inputs.insert("zk-focus-id".into(), Value::Str(focus_id.into()));
-        let world = ProjectWorld::new(&self.root, "focus.typ", inputs, snapshot.overlays)?;
+        let world = ProjectWorld::new(&self.root, "focus.typ", inputs, editor.overlays)?;
         let evaluation = evaluate(world)?;
         let effects = collect_effects(&evaluation)?;
+        let snapshot = Arc::new(EvaluationSnapshot {
+            evaluation,
+            effects,
+            editor_versions: editor.versions,
+        });
+        if !self.snapshot_is_current(&snapshot).await {
+            return Ok(());
+        }
+        *self.latest_evaluation.write().await = Some(snapshot.clone());
 
         let publisher = Arc::new(ClientPublisher {
             client: self.client.clone(),
-            version: snapshot.document_version,
+            versions: snapshot.editor_versions.clone(),
         });
         let mut runner = EffectRunner::default();
         runner.register(DiagnosticsHandler::new(publisher))?;
-        runner.register(CodeActionsHandler::all(CodeActionSink::default()))?;
-        runner.run(&effects, &evaluation).await
+        runner
+            .run_kind(
+                DiagnosticsHandler::KIND,
+                &snapshot.effects,
+                &snapshot.evaluation,
+            )
+            .await
     }
 
     async fn code_actions_inner(
@@ -85,34 +107,30 @@ impl Backend {
         params: CodeActionParams,
     ) -> Result<Vec<CodeActionOrCommand>> {
         let uri = params.text_document.uri;
-        let path = uri
-            .to_file_path()
-            .map_err(|_| anyhow::anyhow!("document URI is not a file: {uri}"))?;
-        let Some(focus_id) = note_id(&path) else {
+        let Some(snapshot) = self.latest_evaluation.read().await.clone() else {
             return Ok(Vec::new());
         };
-        let snapshot = self.editor_snapshot(&uri).await?;
-
-        let mut inputs = Dict::new();
-        inputs.insert("zk-focus-id".into(), Value::Str(focus_id.into()));
-        let world = ProjectWorld::new(&self.root, "focus.typ", inputs, snapshot.overlays)?;
-        let evaluation = evaluate(world)?;
-        let effects = collect_effects(&evaluation)?;
+        if !snapshot.editor_versions.contains_key(&uri)
+            || !self.snapshot_is_current(&snapshot).await
+        {
+            return Ok(Vec::new());
+        }
 
         let sink = CodeActionSink::default();
-        let publisher = Arc::new(ClientPublisher {
-            client: self.client.clone(),
-            version: snapshot.document_version,
-        });
         let mut runner = EffectRunner::default();
-        runner.register(DiagnosticsHandler::new(publisher))?;
         runner.register(CodeActionsHandler::for_request(
             sink.clone(),
             uri,
             params.range,
             params.context.only,
         ))?;
-        runner.run(&effects, &evaluation).await?;
+        runner
+            .run_kind(
+                CodeActionsHandler::KIND,
+                &snapshot.effects,
+                &snapshot.evaluation,
+            )
+            .await?;
         Ok(sink.take())
     }
 }
@@ -121,10 +139,9 @@ fn editor_snapshot_from(
     documents: &HashMap<Url, OpenDocument>,
     current: &Url,
 ) -> Result<EditorSnapshot> {
-    let document_version = documents
-        .get(current)
-        .map(|document| document.version)
-        .ok_or_else(|| anyhow::anyhow!("document is not open: {current}"))?;
+    if !documents.contains_key(current) {
+        anyhow::bail!("document is not open: {current}");
+    }
     let overlays = documents
         .iter()
         .filter_map(|(uri, document)| {
@@ -133,10 +150,21 @@ fn editor_snapshot_from(
                 .map(|path| (path, document.text.clone()))
         })
         .collect();
-    Ok(EditorSnapshot {
-        document_version,
-        overlays,
-    })
+    let versions = documents
+        .iter()
+        .map(|(uri, document)| (uri.clone(), document.version))
+        .collect();
+    Ok(EditorSnapshot { overlays, versions })
+}
+
+fn editor_versions_match(
+    documents: &HashMap<Url, OpenDocument>,
+    versions: &HashMap<Url, i32>,
+) -> bool {
+    documents.len() == versions.len()
+        && documents
+            .iter()
+            .all(|(uri, document)| versions.get(uri) == Some(&document.version))
 }
 
 fn note_id(path: &Path) -> Option<String> {
@@ -146,13 +174,13 @@ fn note_id(path: &Path) -> Option<String> {
 
 struct ClientPublisher {
     client: Client,
-    version: i32,
+    versions: HashMap<Url, i32>,
 }
 
 #[async_trait]
 impl DiagnosticPublisher for ClientPublisher {
     async fn publish(&self, mut params: PublishDiagnosticsParams) -> Result<()> {
-        params.version = Some(self.version);
+        params.version = self.versions.get(&params.uri).copied();
         self.client
             .publish_diagnostics(params.uri, params.diagnostics, params.version)
             .await;
@@ -285,7 +313,7 @@ mod tests {
                 },
             ),
             (
-                b,
+                b.clone(),
                 OpenDocument {
                     version: 3,
                     text: "dirty b".into(),
@@ -295,7 +323,8 @@ mod tests {
 
         let snapshot = editor_snapshot_from(&documents, &a).unwrap();
 
-        assert_eq!(snapshot.document_version, 7);
+        assert_eq!(snapshot.versions[&a], 7);
+        assert_eq!(snapshot.versions[&b], 3);
         assert_eq!(snapshot.overlays.len(), 2);
         assert_eq!(
             snapshot.overlays[Path::new("/tmp/zk-typst-a.typ")],
@@ -305,5 +334,10 @@ mod tests {
             snapshot.overlays[Path::new("/tmp/zk-typst-b.typ")],
             "dirty b"
         );
+        assert!(editor_versions_match(&documents, &snapshot.versions));
+
+        let mut stale = snapshot.versions;
+        stale.insert(a, 6);
+        assert!(!editor_versions_match(&documents, &stale));
     }
 }
