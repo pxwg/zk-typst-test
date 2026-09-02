@@ -1,4 +1,6 @@
-// LSP-shaped declarations and effect announcements for host-side handlers.
+// LSP-shaped declarations for host-side handlers.
+
+#import "eval.typ": inspect
 
 #let effect-kinds = (
   publish-diagnostics: label("lsp.publish-diagnostics"),
@@ -14,8 +16,7 @@
 
 #let severity-values = severity.values()
 
-/// Declare one source-backed LSP diagnostic. Rust preserves the standard fields
-/// and replaces `origin` with the UTF-16 range recovered from its Typst span.
+/// Declare one source-backed LSP diagnostic.
 #let diagnostic(
   origin: none,
   message: none,
@@ -43,7 +44,7 @@
   }
 
   (
-    origin: origin,
+    origin: inspect(origin),
     message: message,
     severity: severity,
     code: if type(code) == label { str(code) } else { code },
@@ -54,8 +55,7 @@
   )
 }
 
-/// Declare one source-backed LSP text edit. Rust replaces `origin` with the
-/// URI and UTF-16 range recovered from its Typst span.
+/// Declare one source-backed LSP text edit.
 #let text-edit(origin: none, new-text: none) = {
   if type(origin) != content {
     panic("text-edit origin must be content")
@@ -63,7 +63,7 @@
   if type(new-text) != str {
     panic("text-edit new-text must be a string")
   }
-  (origin: origin, new-text: new-text)
+  (origin: inspect(origin), new-text: new-text)
 }
 
 /// Group source-backed text edits into one host-resolved workspace edit.
@@ -111,7 +111,7 @@
   }
 
   (
-    applies-to: applies-to,
+    applies-to: inspect(applies-to),
     title: title,
     kind: kind,
     diagnostics: diagnostics,
@@ -122,8 +122,8 @@
   )
 }
 
-/// Announce a complete diagnostic publication for the source document that
-/// owns `document`. An empty array intentionally clears stale diagnostics.
+/// Construct a complete diagnostic publication for the source document that
+/// owns `document`.
 #let publish-diagnostics(document: none, diagnostics: ()) = {
   if type(document) != content {
     panic("diagnostic document must be source-backed content")
@@ -135,15 +135,14 @@
     panic("each published diagnostic must be a dictionary")
   }
 
-  metadata((
-    effect: effect-kinds.publish-diagnostics,
-    document: document,
+  (
+    document: inspect(document),
     diagnostics: diagnostics,
-  ))
+  )
 }
 
-/// Announce every code-action candidate computed for one source document. The
-/// host later selects actions whose `applies-to` spans intersect an LSP request.
+/// Construct every code-action candidate computed for one source document. A
+/// handler later selects actions whose `applies-to` ranges intersect a request.
 #let offer-code-actions(document: none, actions: ()) = {
   if type(document) != content {
     panic("code-action document must be source-backed content")
@@ -155,9 +154,8 @@
     panic("each offered code action must be a dictionary")
   }
 
-  metadata((
-    effect: effect-kinds.code-actions,
-    document: document,
+  (
+    document: inspect(document),
     actions: actions,
-  ))
+  )
 }

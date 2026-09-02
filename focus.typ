@@ -3,6 +3,7 @@
 #import "include.typ": show-reference
 #import "zk/content.typ": zk_contents
 #import "zk/diagnostics.typ": zk_diagnostic_reports
+#import "zk/eval.typ" as eval
 #import "zk/focus.typ": zk_focus_id, zk_present_focus
 #import "zk/graph.typ": zk_graph, zk_observations
 #import "zk/helpers.typ": zk_output_focused
@@ -33,9 +34,12 @@
       message: item.value.message,
       data: item.value,
     ))
-    lsp.publish-diagnostics(
-      document: report.document,
-      diagnostics: diagnostics,
+    eval.announce(
+      lsp.effect-kinds.publish-diagnostics,
+      lsp.publish-diagnostics(
+        document: report.document,
+        diagnostics: diagnostics,
+      ),
     )
   }
 
@@ -53,9 +57,12 @@
       )),
       data: action.data,
     ))
-    lsp.offer-code-actions(
-      document: report.document,
-      actions: actions,
+    eval.announce(
+      lsp.effect-kinds.code-actions,
+      lsp.offer-code-actions(
+        document: report.document,
+        actions: actions,
+      ),
     )
   }
   if sys.inputs.at("zk-repl", default: "false") == "true" {
