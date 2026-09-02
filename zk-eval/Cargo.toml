@@ -1,15 +1,12 @@
 [package]
-name = "zk-typst-test"
+name = "zk-eval"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
 anyhow = "1"
-async-trait = "0.1"
-lsp-types = "0.94.1"
+clap = { version = "4", features = ["derive"] }
 serde_json = "1"
-tokio = { version = "1", features = ["io-std", "macros", "rt-multi-thread", "sync"] }
-tower-lsp = "0.20"
 typst = "0.14.2"
 typst-kit = { version = "0.14.2", default-features = false, features = [
   "embed-fonts",
