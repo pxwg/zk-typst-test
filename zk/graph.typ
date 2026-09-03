@@ -1,12 +1,11 @@
-// Typst-native semantic graph model and observation.
+// Compatibility facade joining node-local rules with global graph operations.
 
-/// Built-in relation identifiers. Values are unattached labels, so they do not
-/// enter the document label completion namespace.
-///
+#import "core/node.typ" as node-core
+#import "graph-node.typ" as node-rule
+
+/// Built-in relation identifiers emitted by the current node observer.
 /// -> dictionary
-#let relations = (
-  ref: label("zk.ref"),
-)
+#let relations = node-rule.relations
 
 #let zk-note-id(value) = {
   if type(value) == label {
@@ -20,6 +19,9 @@
 
 /// Register locally evaluated note metadata as an ID and metadata dictionary.
 ///
+/// This compatibility value is consumed by `zk_observe`; new node observers
+/// should return `core/node.typ` local observations directly.
+///
 /// - id (str, label): A ten-digit note identifier.
 /// - metadata (dictionary): The note's open metadata payload.
 /// -> dictionary
@@ -30,133 +32,63 @@
   (id: zk-note-id(id), metadata: metadata)
 }
 
-/// Construct a semantic note node with `id`, `title`, and `metadata` fields.
+/// Compatibility wrapper around `core/node.typ`'s strict node constructor.
 ///
 /// - id (str, label): A ten-digit note identifier.
 /// - title (content): The evaluated note title.
 /// - metadata (dictionary): The note's open metadata payload.
 /// -> dictionary
-#let zk_node(id: none, title: none, metadata: (:)) = {
-  let id = zk-note-id(id)
-  if type(title) != content {
-    panic("node title must be content")
-  }
-  if type(metadata) != dictionary {
-    panic("node metadata must be a dictionary")
-  }
-  (id: id, title: title, metadata: metadata)
-}
+#let zk_node(id: none, title: none, metadata: (:)) = node-core.node(
+  id: zk-note-id(id),
+  title: title,
+  metadata: metadata,
+)
 
-/// Construct one directed edge occurrence with `source`, `relation`, and
-/// `target` fields in the semantic multigraph.
+/// Compatibility wrapper around `core/node.typ`'s strict edge constructor.
 ///
 /// - source (str, label): The source note identifier.
 /// - relation (label): The semantic relation identifier.
 /// - target (str, label): The target note identifier.
 /// -> dictionary
-#let zk_edge(source: none, relation: none, target: none) = {
-  let source = zk-note-id(source)
-  let target = zk-note-id(target)
-  if type(relation) != label {
-    panic("edge relation must be a label")
-  }
-  (source: source, relation: relation, target: target)
-}
+#let zk_edge(source: none, relation: none, target: none) = node-core.edge(
+  source: zk-note-id(source),
+  relation: relation,
+  target: zk-note-id(target),
+)
 
-/// Pair a semantic value with the evaluated content that produced it.
+/// Compatibility wrapper around the core `Observation<T>` constructor.
 ///
 /// - value (any): The observed semantic value.
 /// - origin (content): The evaluated content that produced the value.
 /// -> dictionary
-#let zk_observed(value, origin) = {
-  if type(origin) != content {
-    panic("observation origin must be content")
-  }
-  (value: value, origin: origin)
-}
+#let zk_observed(value, origin) = node-core.observation(value, origin)
 
-#let zk-note-headings(note, value) = {
-  if type(value) == array {
-    value.fold((), (found, child) => found + zk-note-headings(note, child))
-  } else if type(value) == content {
-    let fields = value.fields()
-    if value.func() == heading {
-      if fields.at("label", default: none) == note.id { (value,) } else { () }
-    } else if "children" in fields {
-      zk-note-headings(note, fields.children)
-    } else if "body" in fields {
-      zk-note-headings(note, fields.body)
-    } else {
-      ()
-    }
-  } else {
-    ()
-  }
-}
-
-/// Return the original heading labelled with the registered note ID.
-///
-/// - note (dictionary): Registered note metadata.
-/// - body (content): The evaluated note body.
-/// -> content
-#let zk-extract-note-heading(note, body) = {
-  let headings = zk-note-headings(note, body)
-  if headings.len() != 1 {
-    panic(
-      "note "
-        + str(note.id)
-        + " must contain exactly one heading labelled with its ID; found "
-        + str(headings.len()),
-    )
-  }
-  headings.first()
-}
-
-#let zk-note-refs(value) = {
-  if type(value) == array {
-    value.fold((), (found, child) => found + zk-note-refs(child))
-  } else if type(value) == content {
-    let fields = value.fields()
-    if value.func() == ref {
-      let target = fields.target
-      if str(target).match(regex("^\\d{10}$")) != none { (value,) } else { () }
-    } else if "children" in fields {
-      zk-note-refs(fields.children)
-    } else if "body" in fields {
-      zk-note-refs(fields.body)
-    } else {
-      ()
-    }
-  } else {
-    ()
-  }
-}
-
-/// Strictly observe one note as a local graph fragment. Parallel refs remain
-/// parallel edge observations and retain their original evaluated RefElem as
-/// origin.
+/// Apply the current node observer and adapt its `outgoing` field to the legacy
+/// `edges` field consumed by existing global graph applications.
 ///
 /// - note (dictionary): Registered note metadata.
 /// - body (content): The evaluated note body.
 /// -> dictionary
 #let zk_observe(note, body) = {
-  let heading = zk-extract-note-heading(note, body)
-  let node = zk_node(
-    id: note.id,
-    title: heading.body,
-    metadata: note.metadata,
-  )
-  let edges = zk-note-refs(body).map(origin => zk_observed(
-    zk_edge(
-      source: node.id,
-      relation: relations.ref,
-      target: origin.fields().target,
-    ),
-    origin,
-  ))
+  if (
+    type(note) != dictionary
+      or "id" not in note
+      or "metadata" not in note
+      or type(note.id) != label
+      or type(note.metadata) != dictionary
+  ) {
+    panic("note must be a registered ID and metadata dictionary")
+  }
+
+  let observe = node-rule.observer(metadata: note.metadata)
+  let local = observe(body)
+  if local.node.value.id != note.id {
+    panic("observed node ID must equal the registered note ID")
+  }
+
   (
-    node: zk_observed(node, heading),
-    edges: edges,
+    node: local.node,
+    edges: local.outgoing,
   )
 }
 
