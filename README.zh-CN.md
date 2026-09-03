@@ -36,4 +36,4 @@
 - [ ] 优化类型安全 API，提高 metadata 的编辑体验
 - [ ] 复现原有的全局语义推导逻辑
   - [ ] 任务追踪计算 (`zk-lsp reconcile`) 
-  - [ ] Formatter 逻辑计算 (根据文本内容计算 metadata)。
+  - [x] Formatter 逻辑计算 (根据文本内容计算 metadata)。

@@ -36,4 +36,4 @@ This project is a proof of concept investigating whether Typst can perform graph
 - [ ] Improve the type-safe API and metadata editing experience
 - [ ] Reproduce the original global semantic inference
   - [ ] Task tracking (`zk-lsp reconcile`)
-  - [ ] Formatter logic (compute metadata from text content)
+  - [x] Formatter logic (compute metadata from text content)
