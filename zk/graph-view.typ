@@ -1,7 +1,6 @@
 // Obsidian-inspired knowledge graph presentation built on the stable graph API.
 
 #import "@preview/cetz:0.5.2"
-#import "graph.typ": zk_graph, zk_observations
 
 #let zk-v-add(a, b) = (a.at(0) + b.at(0), a.at(1) + b.at(1))
 #let zk-v-sub(a, b) = (a.at(0) - b.at(0), a.at(1) - b.at(1))
@@ -23,7 +22,7 @@
 
 // Obsidian's graph view presents a single visual connection for a pair of
 // notes, even when the semantic multigraph contains parallel or reciprocal
-// reference edges. The original edges remain unchanged in `zk_graph`.
+// reference edges. The input graph state remains unchanged.
 #let zk-visual-edges(edges, node-index) = {
   let seen = (:)
   let result = ()
@@ -73,10 +72,8 @@
       let angle = 90deg + 360deg * index / count
       let variation = 0.82 + 0.12 * calc.sin(137deg * index)
       (
-        center.at(0)
-          + calc.cos(angle) * layout-width * 0.42 * variation,
-        center.at(1)
-          + calc.sin(angle) * layout-height * 0.42 * variation,
+        center.at(0) + calc.cos(angle) * layout-width * 0.42 * variation,
+        center.at(1) + calc.sin(angle) * layout-height * 0.42 * variation,
       )
     })
   }
@@ -169,9 +166,13 @@
   positions
 }
 
-#let zk-node-degree(edges, id) = edges.filter(
-  edge => edge.source == id or edge.target == id,
-).len()
+#let zk-node-degree(edges, id) = (
+  edges
+    .filter(
+      edge => edge.source == id or edge.target == id,
+    )
+    .len()
+)
 
 #let zk-node-color(node) = {
   let lifecycle = node.metadata.at("relation", default: "active")
@@ -246,7 +247,9 @@
           circle(position, radius: radius, fill: color, stroke: none)
 
           let id-line = if show-ids {
-            [#linebreak()#text(size: 5.2pt, fill: secondary-text)[#str(node.id)]]
+            [#linebreak()#text(size: 5.2pt, fill: secondary-text)[#str(
+                node.id,
+              )]]
           } else {
             []
           }
@@ -275,21 +278,25 @@
   )
 }
 
-/// Render the complete observed note graph as a restrained black-and-white
-/// CeTZ figure. The graph remains an ordinary value built by the stable API.
+/// Render a complete global graph state as a restrained black-and-white CeTZ
+/// figure.
+///
+/// - graph-state (dictionary): The complete source-anchored graph state.
+/// - width (float): The logical canvas width.
+/// - height (float): The logical canvas height.
+/// - iterations (int): The number of force-layout iterations.
+/// - show-ids (bool): Whether to show node IDs below their titles.
+/// -> content
 #let zk_knowledge_graph(
+  graph-state,
   width: 16,
   height: 8.5,
   iterations: 56,
   show-ids: false,
-) = context {
-  let observations = zk_observations(query(metadata))
-  let graph = zk_graph(observations)
-  zk-render-graph(
-    graph,
-    width,
-    height,
-    iterations,
-    show-ids,
-  )
-}
+) = zk-render-graph(
+  graph-state.value,
+  width,
+  height,
+  iterations,
+  show-ids,
+)
