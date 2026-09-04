@@ -5,7 +5,7 @@
 #import "zk/diagnostics.typ": zk_diagnostic_reports
 #import "zk/eval.typ" as eval
 #import "zk/focus.typ": zk_focus_id, zk_present_focus
-#import "zk/graph.typ": zk_graph, zk_observations
+#import "zk/graph.typ": zk_graph_state, zk_observations
 #import "zk/helpers.typ": zk_output_focused
 #import "zk/hover.typ": zk_emit_hover_cards
 #import "zk/lsp.typ" as lsp
@@ -15,7 +15,8 @@
 #context {
   let elements = query(metadata)
   let observations = zk_observations(elements)
-  let graph = zk_graph(observations)
+  let graph-state = zk_graph_state(observations)
+  let graph = graph-state.value
   let contents = zk_contents(elements)
 
   zk_emit_hover_cards(graph)
@@ -25,7 +26,7 @@
     zk_focus_id,
     reference-renderer: show-reference,
   )
-  for report in zk_diagnostic_reports(graph, observations) {
+  for report in zk_diagnostic_reports(graph-state) {
     let diagnostics = report.diagnostics.map(item => lsp.diagnostic(
       origin: item.origin,
       severity: lsp.severity.at(item.value.severity),
@@ -43,7 +44,7 @@
     )
   }
 
-  for report in zk_quick_fix_reports(graph, observations) {
+  for report in zk_quick_fix_reports(graph-state) {
     let actions = report.actions.map(action => lsp.code-action(
       applies-to: action.applies-to,
       title: action.title,

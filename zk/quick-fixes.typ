@@ -1,4 +1,4 @@
-// Typst-native quick fixes derived from observed graph fragments.
+// Typst-native quick fixes derived from the global graph state.
 
 #import "metadata.typ": zk_metadata_lifecycle
 
@@ -19,15 +19,15 @@
   ))
 }
 
-#let zk-quick-fix(title, code, observed-edge, successors, new-text) = {
+#let zk-quick-fix(title, code, edge-state, successors, new-text) = {
   if type(title) != str {
     panic("quick-fix title must be a string")
   }
   if type(code) != label {
     panic("quick-fix code must be a label")
   }
-  if type(observed-edge) != dictionary {
-    panic("quick-fix edge must be observed")
+  if type(edge-state) != dictionary {
+    panic("quick-fix edge must be stateful")
   }
   if type(successors) != array {
     panic("quick-fix successors must be an array")
@@ -37,24 +37,24 @@
   }
   (
     title: title,
-    applies-to: observed-edge.origin,
+    applies-to: edge-state.origin,
     new-text: new-text,
     data: (
       code: code,
-      edge: observed-edge.value,
+      edge: edge-state.value,
       successors: successors,
     ),
   )
 }
 
-/// Compute every replacement offered for one observed edge occurrence. Only
+/// Compute every replacement offered for one stateful edge occurrence. Only
 /// legacy and archived targets with valid, existing successors are fixable.
 #let zk_edge_quick_fixes(
   graph,
-  observed-edge,
+  edge-state,
   lifecycle: zk_metadata_lifecycle,
 ) = {
-  let edge = observed-edge.value
+  let edge = edge-state.value
   let target = zk-node-at(graph, edge.target)
   if target == none {
     return ()
@@ -83,14 +83,14 @@
     fixes.push(zk-quick-fix(
       "Fix: Replace " + old-text + " with " + new-text,
       code,
-      observed-edge,
+      edge-state,
       successors,
       new-text,
     ))
     fixes.push(zk-quick-fix(
       "Fix: Keep " + old-text + " and append " + new-text,
       code,
-      observed-edge,
+      edge-state,
       successors,
       old-text + " " + new-text,
     ))
@@ -101,7 +101,7 @@
     fixes.push(zk-quick-fix(
       "Fix: Replace " + old-text + " with all relation-target IDs",
       code,
-      observed-edge,
+      edge-state,
       successors,
       all-text,
     ))
@@ -109,35 +109,54 @@
   fixes
 }
 
-/// Compute quick-fix candidates directly from one local graph observation.
+/// Compatibility helper for the existing focused REPL output.
 #let zk_quick_fixes(
   graph,
   observation,
   lifecycle: zk_metadata_lifecycle,
 ) = observation.edges.fold(
   (),
-  (fixes, observed-edge) => (
+  (fixes, edge-state) => (
     fixes
       + zk_edge_quick_fixes(
         graph,
-        observed-edge,
+        edge-state,
         lifecycle: lifecycle,
       )
   ),
 )
 
-/// Compute one document-scoped quick-fix report for every graph observation.
-/// Empty action arrays are retained so the host sees the complete file set.
+/// Compute one document-scoped quick-fix report for every node in a global
+/// graph state. Empty action arrays are retained so the host sees the complete
+/// file set.
+///
+/// - graph-state (dictionary): The complete source-anchored graph state.
+/// - lifecycle (function): A node lifecycle accessor.
+/// -> array
 #let zk_quick_fix_reports(
-  graph,
-  observations,
+  graph-state,
   lifecycle: zk_metadata_lifecycle,
-) = observations.map(observation => (
-  document: observation.node.origin,
-  source: observation.node.value.id,
-  actions: zk_quick_fixes(
-    graph,
-    observation,
-    lifecycle: lifecycle,
-  ),
-))
+) = {
+  let reports = ()
+  for (node-index, node) in graph-state.value.nodes.enumerate() {
+    let actions = ()
+    for (edge-index, edge) in graph-state.value.edges.enumerate() {
+      if edge.source == node.id {
+        actions += zk_edge_quick_fixes(
+          graph-state.value,
+          (
+            value: edge,
+            origin: graph-state.origin.edges.at(edge-index),
+          ),
+          lifecycle: lifecycle,
+        )
+      }
+    }
+    reports.push((
+      document: graph-state.origin.nodes.at(node-index),
+      source: node.id,
+      actions: actions,
+    ))
+  }
+  reports
+}

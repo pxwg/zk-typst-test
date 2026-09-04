@@ -1,4 +1,4 @@
-// Typst-native diagnostics derived from observed note graph fragments.
+// Typst-native diagnostics derived from the global graph state.
 
 #import "metadata.typ": zk_metadata_issues, zk_metadata_lifecycle
 
@@ -42,34 +42,34 @@
   (code: code, severity: severity, message: message, edge: edge)
 }
 
-/// Preserve the exact evaluated ref content that produced a diagnostic.
-#let zk_observed_diagnostic(value, origin) = {
+/// Preserve the exact evaluated ref content that anchors a diagnostic.
+#let zk_diagnostic_state(value, origin) = {
   if type(origin) != content or origin.func() != ref {
     panic("diagnostic origin must be ref content")
   }
   (value: value, origin: origin)
 }
 
-#let zk-edge-diagnostic(code, severity, message, observed-edge) = {
-  zk_observed_diagnostic(
+#let zk-edge-diagnostic(code, severity, message, edge-state) = {
+  zk_diagnostic_state(
     zk_diagnostic(
       code: code,
       severity: severity,
       message: message,
-      edge: observed-edge.value,
+      edge: edge-state.value,
     ),
-    observed-edge.origin,
+    edge-state.origin,
   )
 }
 
 /// Diagnose one outgoing edge occurrence. Normal targets produce `none`;
-/// missing, legacy, and archived targets each produce one observed diagnostic.
+/// missing, legacy, and archived targets each produce one stateful diagnostic.
 #let zk_diagnose_edge(
   graph,
-  observed-edge,
+  edge-state,
   lifecycle: zk_default_lifecycle,
 ) = {
-  let edge = observed-edge.value
+  let edge = edge-state.value
   let target = zk-node-at(graph, edge.target)
   let target-id = str(edge.target)
 
@@ -78,7 +78,7 @@
       diagnostic-codes.missing-target,
       diagnostic-severities.error,
       "Link target " + target-id + " is missing.",
-      observed-edge,
+      edge-state,
     )
   } else {
     let state = lifecycle(target)
@@ -87,14 +87,14 @@
         diagnostic-codes.legacy-target,
         diagnostic-severities.information,
         "Link target " + target-id + " is legacy.",
-        observed-edge,
+        edge-state,
       )
     } else if state == "archived" {
       zk-edge-diagnostic(
         diagnostic-codes.archived-target,
         diagnostic-severities.warning,
         "Link target " + target-id + " is archived.",
-        observed-edge,
+        edge-state,
       )
     } else {
       none
@@ -102,18 +102,64 @@
   }
 }
 
-/// Diagnose every outgoing edge occurrence and aggregate the findings by source
-/// node. Parallel edges retain separate diagnostics and ref origins.
+#let zk-outgoing-edge-states(graph-state, source) = {
+  let outgoing = ()
+  for (index, edge) in graph-state.value.edges.enumerate() {
+    if edge.source == source {
+      outgoing.push((
+        value: edge,
+        origin: graph-state.origin.edges.at(index),
+      ))
+    }
+  }
+  outgoing
+}
+
+/// Diagnose every outgoing edge occurrence in the graph state. Parallel edges
+/// retain separate diagnostics and ref origins.
 #let zk_diagnose_outgoing(
+  graph-state,
+  node,
+  lifecycle: zk_default_lifecycle,
+) = {
+  let diagnostics = ()
+  for edge-state in zk-outgoing-edge-states(graph-state, node.id) {
+    let diagnostic = zk_diagnose_edge(
+      graph-state.value,
+      edge-state,
+      lifecycle: lifecycle,
+    )
+    if diagnostic != none {
+      diagnostics.push(diagnostic)
+    }
+  }
+  diagnostics
+}
+
+/// Attach metadata issues to the source owner of one node state. The structured
+/// field/index subject lets a later host recover a finer span.
+#let zk_diagnose_metadata(graph, node, origin) = {
+  zk_metadata_issues(graph, node).map(issue => {
+    issue.insert("severity", diagnostic-severities.error)
+    (value: issue, origin: origin)
+  })
+}
+
+/// Compatibility helper for the existing focused REPL output.
+#let zk_diagnose_observation(
   graph,
   observation,
   lifecycle: zk_default_lifecycle,
 ) = {
-  let diagnostics = ()
-  for observed-edge in observation.edges {
+  let diagnostics = zk_diagnose_metadata(
+    graph,
+    observation.node.value,
+    observation.node.origin,
+  )
+  for edge-state in observation.edges {
     let diagnostic = zk_diagnose_edge(
       graph,
-      observed-edge,
+      edge-state,
       lifecycle: lifecycle,
     )
     if diagnostic != none {
@@ -126,54 +172,30 @@
   )
 }
 
-/// Attach metadata issues to the note heading that owns their evaluated data.
-/// The structured field/index subject lets a later host recover a finer span.
-#let zk_diagnose_metadata(graph, observation) = {
-  let origin = observation.node.origin
-  zk_metadata_issues(graph, observation.node.value).map(issue => {
-    issue.insert("severity", diagnostic-severities.error)
-    (value: issue, origin: origin)
-  })
-}
-
-/// Diagnose both the focused note's metadata and its outgoing edge occurrences.
-#let zk_diagnose_observation(
-  graph,
-  observation,
-  lifecycle: zk_default_lifecycle,
-) = {
-  let outgoing = zk_diagnose_outgoing(
-    graph,
-    observation,
-    lifecycle: lifecycle,
-  )
-  (
-    source: outgoing.source,
-    diagnostics: zk_diagnose_metadata(graph, observation)
-      + outgoing.diagnostics,
-  )
-}
-
-/// Compute one document-scoped diagnostic report for every graph observation.
-/// Empty diagnostic arrays are retained so the host can clear stale results.
+/// Compute one document-scoped diagnostic report for every node in a global
+/// graph state. Empty diagnostic arrays are retained so the host can clear
+/// stale results.
 ///
-/// - graph (dictionary): A semantic graph.
-/// - observations (array): Local graph observations.
+/// - graph-state (dictionary): The complete source-anchored graph state.
 /// - lifecycle (function): A node lifecycle accessor.
 /// -> array
 #let zk_diagnostic_reports(
-  graph,
-  observations,
+  graph-state,
   lifecycle: zk_default_lifecycle,
-) = observations.map(observation => {
-  let report = zk_diagnose_observation(
-    graph,
-    observation,
-    lifecycle: lifecycle,
-  )
-  (
-    document: observation.node.origin,
-    source: report.source,
-    diagnostics: report.diagnostics,
-  )
-})
+) = {
+  let reports = ()
+  for (index, node) in graph-state.value.nodes.enumerate() {
+    let origin = graph-state.origin.nodes.at(index)
+    reports.push((
+      document: origin,
+      source: node.id,
+      diagnostics: zk_diagnose_metadata(graph-state.value, node, origin)
+        + zk_diagnose_outgoing(
+          graph-state,
+          node,
+          lifecycle: lifecycle,
+        ),
+    ))
+  }
+  reports
+}
