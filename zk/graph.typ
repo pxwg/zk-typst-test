@@ -129,12 +129,3 @@
     (edges, local) => edges + local.edges,
   ),
 )
-
-/// Build the pure semantic directed multigraph from local compatibility states.
-///
-/// This compatibility projection discards the graph state's source origins.
-/// New global semantic computations should retain `zk_graph_state` instead.
-///
-/// - observations (array): Local graph states using the legacy `edges` field.
-/// -> dictionary
-#let zk_graph(observations) = zk_graph_state(observations).value
