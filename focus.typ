@@ -19,7 +19,7 @@
   let graph = graph-state.value
   let contents = zk_contents(elements)
 
-  zk_emit_hover_cards(graph)
+  zk_emit_hover_cards(graph-state)
   zk_present_focus(
     graph,
     contents,

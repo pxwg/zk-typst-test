@@ -1,4 +1,4 @@
-// Queryable hover cards derived from compact semantic graph nodes.
+// Queryable hover cards derived from the global graph state.
 
 #let zk-hover-envelope(node) = (
   protocol: "zk.hover",
@@ -15,12 +15,13 @@
   #label("zk.hover." + str(node.id))
 ]
 
-/// Emit one labelled, queryable hover card for every graph node.
+/// Emit one labelled, queryable hover card for every node in a global graph
+/// state.
 ///
-/// - graph (dictionary): A semantic graph.
+/// - graph-state (dictionary): The complete source-anchored graph state.
 /// -> content
-#let zk_emit_hover_cards(graph) = {
-  for node in graph.nodes {
+#let zk_emit_hover_cards(graph-state) = {
+  for node in graph-state.value.nodes {
     zk-hover-element(node)
   }
 }
