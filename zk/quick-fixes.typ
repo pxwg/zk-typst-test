@@ -57,6 +57,10 @@
   lifecycle: zk_metadata_lifecycle,
 ) = {
   let edge = edge-state.value
+  if edge.relation != label("zk.ref") {
+    return ()
+  }
+
   let target = zk-node-at(graph-state, edge.target)
   if target == none {
     return ()
