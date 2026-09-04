@@ -1,6 +1,5 @@
 // Standardized PDF output helpers for inspecting Typst-native ZK evaluation.
 
-#import "graph.typ": zk_incoming
 #import "diagnostics.typ": zk_diagnostic_reports
 #import "quick-fixes.typ": zk_quick_fix_reports
 
@@ -63,7 +62,7 @@
     report => report.source == node.id,
   )
   let outgoing = graph.edges.filter(edge => edge.source == node.id)
-  let incoming = zk_incoming(graph, node.id)
+  let incoming = graph.edges.filter(edge => edge.target == node.id)
 
   zk_output(
     title: [ZK evaluation: #focus-id],

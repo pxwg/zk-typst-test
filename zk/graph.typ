@@ -138,33 +138,3 @@
 /// - observations (array): Local graph states using the legacy `edges` field.
 /// -> dictionary
 #let zk_graph(observations) = zk_graph_state(observations).value
-
-/// Return all outgoing edge occurrences for one node.
-///
-/// - graph (dictionary): A semantic graph.
-/// - id (str, label): The source note identifier.
-/// -> array
-#let zk_outgoing(graph, id) = {
-  let id = zk-note-id(id)
-  graph.edges.filter(edge => edge.source == id)
-}
-
-/// Return all incoming edge occurrences for one node.
-///
-/// - graph (dictionary): A semantic graph.
-/// - id (str, label): The target note identifier.
-/// -> array
-#let zk_incoming(graph, id) = {
-  let id = zk-note-id(id)
-  graph.edges.filter(edge => edge.target == id)
-}
-
-/// Return the deduplicated targets of one node's outgoing edges.
-///
-/// - graph (dictionary): A semantic graph.
-/// - id (str, label): The source note identifier.
-/// -> array
-#let zk_neighbors(graph, id) = {
-  let outgoing = zk_outgoing(graph, id)
-  outgoing.map(edge => edge.target).dedup()
-}
