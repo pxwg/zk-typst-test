@@ -9,8 +9,8 @@
 )
 #import "zk/focus.typ": zk_present_focus
 #import "zk/graph.typ": (
-  relations, zk-observation-envelope, zk_edge, zk_graph, zk_incoming,
-  zk_neighbors, zk_node, zk_observations, zk_observe, zk_outgoing,
+  relations, zk-observation-envelope, zk_edge, zk_graph, zk_graph_state,
+  zk_incoming, zk_neighbors, zk_node, zk_observations, zk_observe, zk_outgoing,
 )
 
 /// Helper

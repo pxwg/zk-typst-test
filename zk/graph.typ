@@ -1,5 +1,6 @@
 // Compatibility facade joining node-local rules with global graph operations.
 
+#import "core/graph.typ" as graph-core
 #import "core/node.typ" as node-core
 #import "graph-node.typ" as node-rule
 
@@ -117,18 +118,26 @@
     .map(value => value.value)
 }
 
-/// Build the pure semantic directed multigraph from note observations. The
-/// returned dictionary contains compact `nodes` and `edges` arrays.
+/// Build a globally validated graph state from local compatibility states.
 ///
-/// - observations (array): Local graph observations.
+/// - observations (array): Local graph states using the legacy `edges` field.
 /// -> dictionary
-#let zk_graph(observations) = (
-  nodes: observations.map(observation => observation.node.value),
+#let zk_graph_state(observations) = graph-core.state(
+  nodes: observations.map(local => local.node),
   edges: observations.fold(
     (),
-    (edges, observation) => edges + observation.edges.map(edge => edge.value),
+    (edges, local) => edges + local.edges,
   ),
 )
+
+/// Build the pure semantic directed multigraph from local compatibility states.
+///
+/// This compatibility projection discards the graph state's source origins.
+/// New global semantic computations should retain `zk_graph_state` instead.
+///
+/// - observations (array): Local graph states using the legacy `edges` field.
+/// -> dictionary
+#let zk_graph(observations) = zk_graph_state(observations).value
 
 /// Return all outgoing edge occurrences for one node.
 ///
