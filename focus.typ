@@ -1,6 +1,9 @@
 // Stable Tinymist entry point. Neovim selects one expanded note through the
 // instance-local `zk-focus-id` input; all other graph nodes become stubs.
 #import "include.typ": show-reference
+#import "zk/checklist/present.typ" as checklist-present
+#import "zk/checklist/transition.typ" as checklist-transition
+#import "zk/checklist/transport.typ" as checklist-transport
 #import "zk/content.typ": zk_contents
 #import "zk/diagnostics.typ": zk_diagnostic_reports
 #import "zk/eval.typ" as eval
@@ -16,6 +19,12 @@
   let elements = query(metadata)
   let observations = zk_observations(elements)
   let graph-state = zk_graph_state(observations)
+  let checklist-state = checklist-transport.graph-state(
+    graph: graph-state,
+    elements: elements,
+  )
+  checklist-state = checklist-transition.stabilize(checklist-state)
+  graph-state = checklist-state.graph
   let contents = zk_contents(elements)
 
   zk_emit_hover_cards(graph-state)
@@ -23,6 +32,11 @@
     graph-state,
     contents,
     zk_focus_id,
+    body-renderer: (node, body) => checklist-present.present(
+      state: checklist-state,
+      owner: node.id,
+      body: body,
+    ),
     reference-renderer: show-reference,
   )
   for report in zk_diagnostic_reports(graph-state) {

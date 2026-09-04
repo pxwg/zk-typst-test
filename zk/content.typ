@@ -89,18 +89,20 @@
 /// - graph-state (dictionary): The complete source-anchored graph state.
 /// - contents (array): Addressable note content values.
 /// - expanded (function): Whether one graph node should expose its body.
+/// - body-renderer (function): Application-level transformation of one body.
 /// - reference-renderer (function): Renderer for resolved non-note references.
 /// -> content
 #let zk_present_nodes(
   graph-state,
   contents,
   expanded: node => true,
+  body-renderer: (node, body) => body,
   reference-renderer: it => it,
 ) = {
   for node in graph-state.value.nodes {
     if expanded(node) {
       zk-present-body(
-        zk_content_at(contents, node.id),
+        body-renderer(node, zk_content_at(contents, node.id)),
         reference-renderer,
       )
     } else {

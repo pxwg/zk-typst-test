@@ -5,6 +5,9 @@
 // Edit *this* file freely; do not edit link.typ by hand.
 
 #import "include.typ": *
+#import "zk/checklist/present.typ" as checklist-present
+#import "zk/checklist/transition.typ" as checklist-transition
+#import "zk/checklist/transport.typ" as checklist-transport
 #import "zk/graph-view.typ": zk_knowledge_graph
 
 #include "link.typ"
@@ -12,11 +15,22 @@
   let elements = query(metadata)
   let observations = zk_observations(elements)
   let graph-state = zk_graph_state(observations)
+  let checklist-state = checklist-transport.graph-state(
+    graph: graph-state,
+    elements: elements,
+  )
+  checklist-state = checklist-transition.stabilize(checklist-state)
+  graph-state = checklist-state.graph
   let contents = zk_contents(elements)
   zk_knowledge_graph(graph-state)
   zk_present_nodes(
     graph-state,
     contents,
+    body-renderer: (node, body) => checklist-present.present(
+      state: checklist-state,
+      owner: node.id,
+      body: body,
+    ),
     reference-renderer: show-reference,
   )
 }
