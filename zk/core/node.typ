@@ -1,23 +1,23 @@
-/// Stable node-local semantic data contracts.
+/// Stable node-local semantic state contracts.
 ///
 /// This module models one node's semantic value, its outgoing edges, and the
-/// source-backed observations that produced them. It defines four structural
+/// source-backed state slots that carry them. It defines four structural
 /// dictionary types:
 ///
 /// ```typ
 /// Node = (id: label, title: content, metadata: dictionary)
 /// Edge = (source: label, relation: label, target: label)
-/// Observation<T> = (value: T, origin: content)
-/// LocalNodeObservation = (
-///   node: Observation<Node>,
-///   outgoing: array<Observation<Edge>>,
+/// State<T> = (value: T, origin: content)
+/// LocalNodeState = (
+///   node: State<Node>,
+///   outgoing: array<State<Edge>>,
 /// )
 /// ```
 ///
-/// A user-defined node observer follows the conceptual signature
-/// `content -> LocalNodeObservation`. This core validates only node-local
-/// structure: every outgoing edge must use the observed node's ID as its
-/// source. ID uniqueness and target membership belong to global graph logic.
+/// `State<T>` carries a current semantic value and its stable source origin.
+/// `LocalNodeState` groups one node state with its outgoing edge states. This
+/// core validates node-local structure: every outgoing edge must use the
+/// node state's ID as its source.
 
 /// Construct a semantic node value.
 ///
@@ -57,30 +57,32 @@
   (source: source, relation: relation, target: target)
 }
 
-/// Pair a semantic value with the evaluated content that produced it.
+/// Place a semantic value in a source-anchored state slot.
 ///
-/// This is the dynamic Typst representation of `Observation<T>`.
+/// This is the dynamic Typst representation of `State<T>`. `origin` identifies
+/// the stable source owner of the slot; state evolution may replace `value`
+/// while preserving that origin.
 ///
-/// - value (any): The observed semantic value.
-/// - origin (content): The source-backed evaluated content that produced it.
+/// - value (any): The current semantic value.
+/// - origin (content): The source-backed content anchoring this state slot.
 /// -> dictionary
-#let observation(value, origin) = {
+#let state(value, origin) = {
   if type(origin) != content {
-    panic("observation origin must be content")
+    panic("state origin must be content")
   }
   (value: value, origin: origin)
 }
 
-/// Construct one node-local observation from an observed node and its observed
-/// outgoing edges.
+/// Construct one node-local state from a node state and its outgoing edge
+/// states.
 ///
-/// Every outgoing edge must use the observed node's ID as its source. Target
+/// Every outgoing edge must use the node state's ID as its source. Target
 /// membership is a global graph concern and is intentionally not checked here.
 ///
-/// - node (dictionary): An `Observation<Node>` value.
-/// - outgoing (array): An array of `Observation<Edge>` values.
+/// - node (dictionary): A `State<Node>` value.
+/// - outgoing (array): An array of `State<Edge>` values.
 /// -> dictionary
-#let local-observation(node: none, outgoing: ()) = {
+#let local-state(node: none, outgoing: ()) = {
   if (
     type(node) != dictionary
       or "value" not in node
@@ -94,30 +96,30 @@
       or type(node.value.metadata) != dictionary
       or type(node.origin) != content
   ) {
-    panic("local node observation must contain an Observation<Node>")
+    panic("local node state must contain a State<Node>")
   }
   if type(outgoing) != array {
-    panic("local node outgoing edges must be an array")
+    panic("local node outgoing states must be an array")
   }
 
-  for observed-edge in outgoing {
+  for edge-state in outgoing {
     if (
-      type(observed-edge) != dictionary
-        or "value" not in observed-edge
-        or "origin" not in observed-edge
-        or type(observed-edge.value) != dictionary
-        or "source" not in observed-edge.value
-        or "relation" not in observed-edge.value
-        or "target" not in observed-edge.value
-        or type(observed-edge.value.source) != label
-        or type(observed-edge.value.relation) != label
-        or type(observed-edge.value.target) != label
-        or type(observed-edge.origin) != content
+      type(edge-state) != dictionary
+        or "value" not in edge-state
+        or "origin" not in edge-state
+        or type(edge-state.value) != dictionary
+        or "source" not in edge-state.value
+        or "relation" not in edge-state.value
+        or "target" not in edge-state.value
+        or type(edge-state.value.source) != label
+        or type(edge-state.value.relation) != label
+        or type(edge-state.value.target) != label
+        or type(edge-state.origin) != content
     ) {
-      panic("local node outgoing edges must contain Observation<Edge> values")
+      panic("local node outgoing states must contain State<Edge> values")
     }
-    if observed-edge.value.source != node.value.id {
-      panic("outgoing edge source must equal the observed node ID")
+    if edge-state.value.source != node.value.id {
+      panic("outgoing edge source must equal the node state ID")
     }
   }
 
