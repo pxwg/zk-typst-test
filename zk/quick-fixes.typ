@@ -7,15 +7,17 @@
   legacy-target: label("zk.quick-fix.legacy-target"),
 )
 
-#let zk-node-at(graph, id) = graph.nodes.find(node => node.id == id)
+#let zk-node-at(graph-state, id) = graph-state.value.nodes.find(
+  node => node.id == id,
+)
 
-#let zk-valid-relation-targets(graph, node) = {
+#let zk-valid-relation-targets(graph-state, node) = {
   let targets = node.metadata.at("relation-target", default: ())
   if type(targets) != array {
     return ()
   }
   targets.filter(target => (
-    type(target) == label and zk-node-at(graph, target) != none
+    type(target) == label and zk-node-at(graph-state, target) != none
   ))
 }
 
@@ -50,12 +52,12 @@
 /// Compute every replacement offered for one stateful edge occurrence. Only
 /// legacy and archived targets with valid, existing successors are fixable.
 #let zk_edge_quick_fixes(
-  graph,
+  graph-state,
   edge-state,
   lifecycle: zk_metadata_lifecycle,
 ) = {
   let edge = edge-state.value
-  let target = zk-node-at(graph, edge.target)
+  let target = zk-node-at(graph-state, edge.target)
   if target == none {
     return ()
   }
@@ -71,7 +73,7 @@
     return ()
   }
 
-  let successors = zk-valid-relation-targets(graph, target)
+  let successors = zk-valid-relation-targets(graph-state, target)
   if successors.len() == 0 {
     return ()
   }
@@ -126,7 +128,7 @@
     for (edge-index, edge) in graph-state.value.edges.enumerate() {
       if edge.source == node.id {
         actions += zk_edge_quick_fixes(
-          graph-state.value,
+          graph-state,
           (
             value: edge,
             origin: graph-state.origin.edges.at(edge-index),

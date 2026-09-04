@@ -18,7 +18,9 @@
 /// Read a validated lifecycle value from otherwise open note metadata.
 #let zk_default_lifecycle(node) = zk_metadata_lifecycle(node)
 
-#let zk-node-at(graph, id) = graph.nodes.find(node => node.id == id)
+#let zk-node-at(graph-state, id) = graph-state.value.nodes.find(
+  node => node.id == id,
+)
 
 /// Construct one semantic diagnostic about an edge occurrence.
 #let zk_diagnostic(
@@ -65,12 +67,12 @@
 /// Diagnose one outgoing edge occurrence. Normal targets produce `none`;
 /// missing, legacy, and archived targets each produce one stateful diagnostic.
 #let zk_diagnose_edge(
-  graph,
+  graph-state,
   edge-state,
   lifecycle: zk_default_lifecycle,
 ) = {
   let edge = edge-state.value
-  let target = zk-node-at(graph, edge.target)
+  let target = zk-node-at(graph-state, edge.target)
   let target-id = str(edge.target)
 
   if target == none {
@@ -125,7 +127,7 @@
   let diagnostics = ()
   for edge-state in zk-outgoing-edge-states(graph-state, node.id) {
     let diagnostic = zk_diagnose_edge(
-      graph-state.value,
+      graph-state,
       edge-state,
       lifecycle: lifecycle,
     )
@@ -138,8 +140,8 @@
 
 /// Attach metadata issues to the source owner of one node state. The structured
 /// field/index subject lets a later host recover a finer span.
-#let zk_diagnose_metadata(graph, node, origin) = {
-  zk_metadata_issues(graph, node).map(issue => {
+#let zk_diagnose_metadata(graph-state, node, origin) = {
+  zk_metadata_issues(graph-state, node).map(issue => {
     issue.insert("severity", diagnostic-severities.error)
     (value: issue, origin: origin)
   })
@@ -162,7 +164,7 @@
     reports.push((
       document: origin,
       source: node.id,
-      diagnostics: zk_diagnose_metadata(graph-state.value, node, origin)
+      diagnostics: zk_diagnose_metadata(graph-state, node, origin)
         + zk_diagnose_outgoing(
           graph-state,
           node,

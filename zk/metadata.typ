@@ -69,8 +69,12 @@
 /// Validate the closed metadata fields of one graph node.
 ///
 /// The returned values are pure semantic issues. `diagnostics.typ` attaches
-/// their source observation and transports them through the diagnostic pipe.
-#let zk_metadata_issues(graph, node) = {
+/// their source state and transports them through the diagnostic pipe.
+///
+/// - graph-state (dictionary): The complete source-anchored graph state.
+/// - node (dictionary): The graph node whose metadata should be validated.
+/// -> array
+#let zk_metadata_issues(graph-state, node) = {
   let issues = ()
   let checklist-status = node.metadata.at("checklist-status", default: none)
   if (
@@ -140,7 +144,10 @@
           target,
           index: index,
         ))
-      } else if graph.nodes.find(candidate => candidate.id == target) == none {
+      } else if (
+        graph-state.value.nodes.find(candidate => candidate.id == target)
+          == none
+      ) {
         issues.push(zk-metadata-issue(
           metadata-diagnostic-codes.missing-relation-target,
           "Relation target " + str(target) + " is missing.",
