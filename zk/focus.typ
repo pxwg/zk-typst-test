@@ -19,18 +19,18 @@
 /// Expand the focused node and render every other graph node as a stub. When
 /// no focus ID is supplied, expand every node.
 ///
-/// - graph (dictionary): A semantic graph.
+/// - graph-state (dictionary): The complete source-anchored graph state.
 /// - contents (array): Addressable note content values.
 /// - focus-id (str, none): The selected note identifier.
 /// - reference-renderer (function): Renderer for resolved non-note references.
 /// -> content
 #let zk_present_focus(
-  graph,
+  graph-state,
   contents,
   focus-id,
   reference-renderer: it => it,
 ) = zk_present_nodes(
-  graph,
+  graph-state,
   contents,
   expanded: node => focus-id == none or str(node.id) == focus-id,
   reference-renderer: reference-renderer,

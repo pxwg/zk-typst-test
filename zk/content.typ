@@ -84,20 +84,20 @@
   body
 }
 
-/// Present graph nodes by expanding selected bodies and stubbing the rest.
+/// Present graph-state nodes by expanding selected bodies and stubbing the rest.
 ///
-/// - graph (dictionary): A semantic graph.
+/// - graph-state (dictionary): The complete source-anchored graph state.
 /// - contents (array): Addressable note content values.
 /// - expanded (function): Whether one graph node should expose its body.
 /// - reference-renderer (function): Renderer for resolved non-note references.
 /// -> content
 #let zk_present_nodes(
-  graph,
+  graph-state,
   contents,
   expanded: node => true,
   reference-renderer: it => it,
 ) = {
-  for node in graph.nodes {
+  for node in graph-state.value.nodes {
     if expanded(node) {
       zk-present-body(
         zk_content_at(contents, node.id),

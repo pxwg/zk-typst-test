@@ -16,12 +16,11 @@
   let elements = query(metadata)
   let observations = zk_observations(elements)
   let graph-state = zk_graph_state(observations)
-  let graph = graph-state.value
   let contents = zk_contents(elements)
 
   zk_emit_hover_cards(graph-state)
   zk_present_focus(
-    graph,
+    graph-state,
     contents,
     zk_focus_id,
     reference-renderer: show-reference,
