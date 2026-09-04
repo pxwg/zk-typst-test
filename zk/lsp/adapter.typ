@@ -1,6 +1,10 @@
-// LSP-shaped declarations for host-side handlers.
+// Protocol adaptation and announcement publication for LSP host handlers.
+//
+// This module knows the LSP wire shapes and the generic eval announcement
+// boundary. It does not know how project graph rules derive diagnostics or
+// code actions.
 
-#import "eval.typ": inspect
+#import "../eval.typ" as eval
 
 #let effect-kinds = (
   publish-diagnostics: label("lsp.publish-diagnostics"),
@@ -44,7 +48,7 @@
   }
 
   (
-    origin: inspect(origin),
+    origin: eval.inspect(origin),
     message: message,
     severity: severity,
     code: if type(code) == label { str(code) } else { code },
@@ -63,7 +67,7 @@
   if type(new-text) != str {
     panic("text-edit new-text must be a string")
   }
-  (origin: inspect(origin), new-text: new-text)
+  (origin: eval.inspect(origin), new-text: new-text)
 }
 
 /// Group source-backed text edits into one host-resolved workspace edit.
@@ -111,7 +115,7 @@
   }
 
   (
-    applies-to: inspect(applies-to),
+    applies-to: eval.inspect(applies-to),
     title: title,
     kind: kind,
     diagnostics: diagnostics,
@@ -136,7 +140,7 @@
   }
 
   (
-    document: inspect(document),
+    document: eval.inspect(document),
     diagnostics: diagnostics,
   )
 }
@@ -155,7 +159,87 @@
   }
 
   (
-    document: inspect(document),
+    document: eval.inspect(document),
     actions: actions,
   )
+}
+
+#let adapt-diagnostic(item, source) = diagnostic(
+  origin: item.origin,
+  severity: severity.at(item.value.severity),
+  code: item.value.code,
+  source: source,
+  message: item.value.message,
+  data: item.value,
+)
+
+#let adapt-code-action(action) = code-action(
+  applies-to: action.applies-to,
+  title: action.title,
+  kind: "quickfix",
+  diagnostics: (),
+  edit: workspace-edit(edits: (
+    text-edit(
+      origin: action.applies-to,
+      new-text: action.new-text,
+    ),
+  )),
+  data: action.data,
+)
+
+/// Adapt project-level rule reports to LSP values and announce complete
+/// document-scoped publications. Empty report arrays are announced so a host
+/// can clear stale diagnostics and code actions.
+///
+/// The expected rule result is
+///
+/// ```typ
+/// (
+///   diagnostic-reports: array,
+///   code-action-reports: array,
+/// )
+/// ```
+///
+/// - result (dictionary): Protocol-independent output of project LSP rules.
+/// - source (str): Diagnostic producer identifier exposed through LSP.
+/// -> content
+#let announce(result, source: "zk-lsp") = {
+  if type(result) != dictionary {
+    panic("LSP rule result must be a dictionary")
+  }
+  let diagnostic-reports = result.at("diagnostic-reports", default: none)
+  let code-action-reports = result.at("code-action-reports", default: none)
+  if type(diagnostic-reports) != array {
+    panic("LSP diagnostic reports must be an array")
+  }
+  if type(code-action-reports) != array {
+    panic("LSP code-action reports must be an array")
+  }
+  if type(source) != str {
+    panic("LSP diagnostic source must be a string")
+  }
+
+  for report in diagnostic-reports {
+    let diagnostics = report.diagnostics.map(
+      item => adapt-diagnostic(item, source),
+    )
+    eval.announce(
+      effect-kinds.publish-diagnostics,
+      publish-diagnostics(
+        document: report.document,
+        diagnostics: diagnostics,
+      ),
+    )
+  }
+
+  for report in code-action-reports {
+    let actions = report.actions.map(adapt-code-action)
+    eval.announce(
+      effect-kinds.code-actions,
+      offer-code-actions(
+        document: report.document,
+        actions: actions,
+      ),
+    )
+  }
 }

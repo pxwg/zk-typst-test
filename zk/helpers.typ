@@ -1,7 +1,6 @@
 // Standardized PDF output helpers for inspecting Typst-native ZK evaluation.
 
-#import "diagnostics.typ": zk_diagnostic_reports
-#import "quick-fixes.typ": zk_quick_fix_reports
+#import "lsp/rules.typ" as lsp-rules
 
 #let zk-output-entry(name, value) = block(
   width: 100%,
@@ -55,10 +54,11 @@
     return zk_output(error: "focused graph node is missing")
   }
 
-  let diagnostic-report = zk_diagnostic_reports(graph-state).find(
+  let lsp-result = lsp-rules.evaluate(graph-state)
+  let diagnostic-report = lsp-result.diagnostic-reports.find(
     report => report.source == node.id,
   )
-  let quick-fix-report = zk_quick_fix_reports(graph-state).find(
+  let quick-fix-report = lsp-result.code-action-reports.find(
     report => report.source == node.id,
   )
   let outgoing = graph.edges.filter(edge => edge.source == node.id)

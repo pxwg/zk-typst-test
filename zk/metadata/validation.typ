@@ -37,8 +37,8 @@
 
 /// Validate the default fields of one graph node.
 ///
-/// The returned values are pure semantic issues. `diagnostics.typ` attaches
-/// their source state and transports them through the diagnostic pipe.
+/// The returned values are pure semantic issues. The project LSP diagnostic
+/// rules attach their source state before protocol adaptation.
 ///
 /// - graph-state (dictionary): The complete source-anchored graph state.
 /// - node (dictionary): The graph node whose metadata should be validated.

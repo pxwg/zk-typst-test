@@ -1,8 +1,7 @@
 #import "../../include.typ": *
 #import "../../zk/checklist/transition.typ": stabilize
 #import "../../zk/checklist/transport.typ" as checklist-transport
-#import "../../zk/diagnostics.typ": zk_diagnostic_reports
-#import "../../zk/quick-fixes.typ": zk_quick_fix_reports
+#import "../../zk/lsp/rules.typ" as lsp-rules
 
 #[
   #let zk-metadata = zk_metadata
@@ -36,8 +35,9 @@
     graph: graph,
     elements: elements,
   ))
-  let diagnostic-report = zk_diagnostic_reports(final.graph).first()
-  let quick-fix-report = zk_quick_fix_reports(final.graph).first()
+  let lsp-result = lsp-rules.evaluate(final.graph)
+  let diagnostic-report = lsp-result.diagnostic-reports.first()
+  let quick-fix-report = lsp-result.code-action-reports.first()
 
   assert.eq(diagnostic-report.diagnostics, ())
   assert.eq(quick-fix-report.actions, ())

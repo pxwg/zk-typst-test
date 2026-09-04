@@ -1,6 +1,6 @@
-// Typst-native quick fixes derived from the global graph state.
+// Project-level code-action rules derived from the global graph state.
 
-#import "metadata.typ": zk_metadata_lifecycle
+#import "../../metadata.typ": zk_metadata_lifecycle
 
 #let quick-fix-codes = (
   archived-target: label("zk.quick-fix.archived-target"),

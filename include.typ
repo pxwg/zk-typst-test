@@ -2,7 +2,6 @@
 #import "zk/checklist/element.typ" as checklist-element
 #import "zk/checklist/transport.typ" as checklist-transport
 #import "zk/helpers.typ": zk_output_focused
-#import "zk/lsp.typ" as lsp
 #import "zk/metadata.typ": checklist-statuses, note-relations, zk_metadata
 #import "zk/note.typ": zk_note_registration
 
