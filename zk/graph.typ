@@ -56,12 +56,12 @@
   target: zk-note-id(target),
 )
 
-/// Compatibility wrapper around the core `Observation<T>` constructor.
+/// Legacy compatibility wrapper around the core `State<T>` constructor.
 ///
-/// - value (any): The observed semantic value.
-/// - origin (content): The evaluated content that produced the value.
+/// - value (any): The current semantic value.
+/// - origin (content): The source-backed content anchoring the state slot.
 /// -> dictionary
-#let zk_observed(value, origin) = node-core.observation(value, origin)
+#let zk_observed(value, origin) = node-core.state(value, origin)
 
 /// Apply the current node observer and adapt its `outgoing` field to the legacy
 /// `edges` field consumed by existing global graph applications.

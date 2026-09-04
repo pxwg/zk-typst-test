@@ -1,4 +1,5 @@
-/// Default node-local observation rules for the current Zettelkasten format.
+/// Default node-local state initialization rules for the current
+/// Zettelkasten format.
 ///
 /// This module implements one user-level node observer on top of
 /// `core/node.typ`.
@@ -10,7 +11,7 @@
 ///
 /// ```typ
 /// observer(metadata: dictionary) -> (
-///   content -> LocalNodeObservation
+///   content -> LocalNodeState
 /// )
 /// ```
 
@@ -69,7 +70,7 @@
 /// Configure the current Zettelkasten node observer with open note metadata.
 ///
 /// The returned function implements the node-local observer signature
-/// `content -> LocalNodeObservation` documented by `core/node.typ`.
+/// `content -> LocalNodeState`.
 ///
 /// - metadata (dictionary): The note's open metadata payload.
 /// -> function
@@ -97,8 +98,8 @@
       title: heading.body,
       metadata: metadata,
     )
-    let observed-node = node-core.observation(semantic-node, heading)
-    let outgoing = note-refs(body).map(reference => node-core.observation(
+    let node-state = node-core.state(semantic-node, heading)
+    let outgoing = note-refs(body).map(reference => node-core.state(
       node-core.edge(
         source: semantic-node.id,
         relation: relations.ref,
@@ -107,8 +108,8 @@
       reference,
     ))
 
-    node-core.local-observation(
-      node: observed-node,
+    node-core.local-state(
+      node: node-state,
       outgoing: outgoing,
     )
   }
