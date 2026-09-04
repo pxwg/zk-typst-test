@@ -25,9 +25,15 @@
 
 #let zk-metadata-element = metadata
 
-/// Register one note's compact graph observation and addressable full content.
-#let zettel(metadata: (:), body) = {
-  let note = zk_note_registration(metadata, body)
+/// Realize one note's configured metadata prefix, then register its compact
+/// graph observation and addressable full content.
+#let zettel(metadata: zk_metadata, body) = {
+  if type(metadata) != function {
+    panic("zettel metadata must be a configured registration function")
+  }
+
+  let initial-metadata = metadata()
+  let note = zk_note_registration(initial-metadata, body)
   let observation = zk_observe(note, body)
   zk-metadata-element(zk-observation-envelope(observation))
   zk_content_element(note.id, body)

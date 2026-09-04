@@ -112,15 +112,22 @@ def note_source(
 ) -> str:
     current_id = note_id(index)
     nested_ref = f" Compare the argument with @{targets[-1]}." if targets else ""
+    metadata_delta = [
+        f'  abstract: "Synthetic architecture fixture for {title}.",',
+        '  keywords: ("graph-fixture", "architecture-test"),',
+    ]
+    checklist_status = checklist(index)
+    if checklist_status != "checklist-statuses.none_":
+        metadata_delta.append(f"  checklist-status: {checklist_status},")
+    relation = lifecycle(index)
+    if relation != "note-relations.active":
+        metadata_delta.append(f"  relation: {relation},")
+    metadata_delta = "\n".join(metadata_delta)
+
     return f'''#import "../include.typ": *
 {GENERATED_MARKER}
-#let zk-metadata = zk_metadata(
-  aliases: (),
-  abstract: "Synthetic architecture fixture for {title}.",
-  keywords: ("graph-fixture", "architecture-test"),
-  checklist-status: {checklist(index)},
-  relation: {lifecycle(index)},
-  relation-target: (),
+#let zk-metadata = zk_metadata.with(
+{metadata_delta}
 )
 
 #show: zettel.with(metadata: zk-metadata)

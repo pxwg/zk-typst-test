@@ -1,12 +1,9 @@
 #import "../include.typ": *
 // Generated knowledge-graph architecture fixture.
-#let zk-metadata = zk_metadata(
-  aliases: (),
+#let zk-metadata = zk_metadata.with(
   abstract: "Synthetic architecture fixture for Evaluation Criteria.",
   keywords: ("graph-fixture", "architecture-test"),
-  checklist-status: checklist-statuses.none_,
   relation: note-relations.archived,
-  relation-target: (),
 )
 
 #show: zettel.with(metadata: zk-metadata)

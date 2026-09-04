@@ -1,11 +1,6 @@
 #import "../include.typ": *
-#let zk-metadata = zk_metadata(
-  aliases: (),
-  abstract: "",
+#let zk-metadata = zk_metadata.with(
   keywords: ("hello", "typst", "man"),
-  checklist-status: checklist-statuses.none_,
-  relation: note-relations.active,
-  relation-target: (),
 )
 
 #show: zettel.with(metadata: zk-metadata)

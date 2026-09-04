@@ -1,9 +1,5 @@
 #import "../include.typ": *
-#let zk-metadata = zk_metadata(
-  aliases: (),
-  abstract: "",
-  keywords: (),
-  checklist-status: checklist-statuses.none_,
+#let zk-metadata = zk_metadata.with(
   relation: note-relations.archived,
   relation-target: (<2608310250>,),
 )
