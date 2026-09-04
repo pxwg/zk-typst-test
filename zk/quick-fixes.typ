@@ -109,23 +109,6 @@
   fixes
 }
 
-/// Compatibility helper for the existing focused REPL output.
-#let zk_quick_fixes(
-  graph,
-  observation,
-  lifecycle: zk_metadata_lifecycle,
-) = observation.edges.fold(
-  (),
-  (fixes, edge-state) => (
-    fixes
-      + zk_edge_quick_fixes(
-        graph,
-        edge-state,
-        lifecycle: lifecycle,
-      )
-  ),
-)
-
 /// Compute one document-scoped quick-fix report for every node in a global
 /// graph state. Empty action arrays are retained so the host sees the complete
 /// file set.

@@ -67,6 +67,6 @@
     )
   }
   if sys.inputs.at("zk-repl", default: "false") == "true" {
-    zk_output_focused(graph, observations, zk_focus_id)
+    zk_output_focused(graph-state, zk_focus_id)
   }
 }

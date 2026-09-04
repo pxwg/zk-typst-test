@@ -145,33 +145,6 @@
   })
 }
 
-/// Compatibility helper for the existing focused REPL output.
-#let zk_diagnose_observation(
-  graph,
-  observation,
-  lifecycle: zk_default_lifecycle,
-) = {
-  let diagnostics = zk_diagnose_metadata(
-    graph,
-    observation.node.value,
-    observation.node.origin,
-  )
-  for edge-state in observation.edges {
-    let diagnostic = zk_diagnose_edge(
-      graph,
-      edge-state,
-      lifecycle: lifecycle,
-    )
-    if diagnostic != none {
-      diagnostics.push(diagnostic)
-    }
-  }
-  (
-    source: observation.node.value.id,
-    diagnostics: diagnostics,
-  )
-}
-
 /// Compute one document-scoped diagnostic report for every node in a global
 /// graph state. Empty diagnostic arrays are retained so the host can clear
 /// stale results.
