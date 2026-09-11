@@ -1,5 +1,5 @@
 use anyhow::{Context, Result, anyhow, bail};
-use typst::WorldExt;
+use typst::{World, WorldExt};
 use typst::diag::Warned;
 use typst::foundations::{Array, Content, Dict, Label, NativeElement, Selector, Value};
 use typst::introspection::MetadataElem;
@@ -131,9 +131,27 @@ fn resolve_inspect(marker: &Content, world: &ProjectWorld) -> Result<Value> {
     external_range.insert("start".into(), Value::Int(range.start.try_into()?));
     external_range.insert("end".into(), Value::Int(range.end.try_into()?));
 
+    // Resolve editor coordinates against the evaluated source, never a later
+    // disk read. Keep the original byte range for non-editor consumers.
+    let text = world.source(id)?;
+    let position = |byte| -> Result<Value> {
+        let lines = text.lines();
+        let line = lines.byte_to_line(byte).context("invalid source offset")?;
+        let start = lines.line_to_byte(line).context("invalid source line")?;
+        let character = text.text()[start..byte].encode_utf16().count();
+        let mut value = Dict::new();
+        value.insert("line".into(), Value::Int(line.try_into()?));
+        value.insert("character".into(), Value::Int(character.try_into()?));
+        Ok(Value::Dict(value))
+    };
+    let mut utf16_range = Dict::new();
+    utf16_range.insert("start".into(), position(range.start)?);
+    utf16_range.insert("end".into(), position(range.end)?);
+
     let mut inspect = Dict::new();
     inspect.insert("source".into(), Value::Str(source.into()));
     inspect.insert("range".into(), Value::Dict(external_range));
+    inspect.insert("range-utf16".into(), Value::Dict(utf16_range));
     Ok(Value::Dict(inspect))
 }
 

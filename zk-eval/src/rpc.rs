@@ -65,6 +65,9 @@ fn handle_client(
     runtime: &Mutex<Runtime>,
     stopping: &AtomicBool,
 ) -> Result<()> {
+    // macOS inherits O_NONBLOCK from the listener. Client IO uses blocking
+    // writes so responses larger than the socket buffer are not truncated.
+    stream.set_nonblocking(false)?;
     stream.set_read_timeout(Some(Duration::from_millis(100)))?;
     stream.set_write_timeout(Some(Duration::from_secs(5)))?;
     let mut reader = BufReader::new(stream.try_clone()?);
