@@ -8,8 +8,7 @@
 #import "zk/focus.typ": zk_focus_id, zk_present_focus
 #import "zk/graph.typ": zk_graph_state, zk_observations
 #import "zk/helpers.typ": zk_output_focused
-#import "zk/hover.typ": zk_emit_hover_cards
-#import "zk/lsp/consumer.typ" as lsp-consumer
+// Editor announcements are evaluated separately through lsp.typ.
 
 #include "link.typ"
 #context {
@@ -24,7 +23,6 @@
   graph-state = checklist-state.graph
   let contents = zk_contents(elements)
 
-  zk_emit_hover_cards(graph-state)
   zk_present_focus(
     graph-state,
     contents,
@@ -36,7 +34,6 @@
     ),
     reference-renderer: show-reference,
   )
-  lsp-consumer.consume(graph-state)
   if sys.inputs.at("zk-repl", default: "false") == "true" {
     zk_output_focused(graph-state, zk_focus_id)
   }
