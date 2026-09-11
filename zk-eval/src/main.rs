@@ -1,16 +1,26 @@
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
-use clap::{ArgAction, Parser, ValueHint};
+use clap::{ArgAction, Parser, Subcommand, ValueHint};
 use typst::foundations::{Dict, Value};
-use zk_eval::{ProjectWorld, eval};
+use zk_eval::Runtime;
+
+#[cfg(unix)]
+mod rpc;
 
 #[derive(Parser)]
-#[command(name = "zk-eval")]
+#[command(
+    name = "zk-eval",
+    subcommand_negates_reqs = true,
+    args_conflicts_with_subcommands = true
+)]
 struct Arguments {
-    /// Path to the input Typst file.
-    #[arg(value_name = "INPUT", value_hint = ValueHint::FilePath)]
-    input: PathBuf,
+    #[command(subcommand)]
+    command: Option<Command>,
+
+    /// Path to the input Typst file (one-shot evaluation).
+    #[arg(value_name = "INPUT", value_hint = ValueHint::FilePath, required = true)]
+    input: Option<PathBuf>,
 
     /// Configure the project root.
     #[arg(long, value_name = "DIR", value_hint = ValueHint::DirPath)]
@@ -26,12 +36,32 @@ struct Arguments {
     inputs: Vec<(String, String)>,
 }
 
+#[derive(Subcommand)]
+enum Command {
+    /// Keep a project's Typst state alive and accept local JSON-RPC requests.
+    Serve {
+        #[arg(long, default_value = ".", value_name = "DIR", value_hint = ValueHint::DirPath)]
+        root: PathBuf,
+        #[arg(long, value_name = "PATH", value_hint = ValueHint::FilePath)]
+        socket: PathBuf,
+    },
+}
+
 fn main() -> Result<()> {
     let arguments = Arguments::parse();
-    let input = arguments
-        .input
+    if let Some(Command::Serve { root, socket }) = arguments.command {
+        #[cfg(unix)]
+        return rpc::serve(&root, &socket);
+        #[cfg(not(unix))]
+        {
+            let _ = (root, socket);
+            anyhow::bail!("Unix socket serving is only available on Unix platforms");
+        }
+    }
+    let input = arguments.input.context("input file is required")?;
+    let input = input
         .canonicalize()
-        .with_context(|| format!("failed to resolve input {}", arguments.input.display()))?;
+        .with_context(|| format!("failed to resolve input {}", input.display()))?;
     let root = arguments
         .root
         .as_deref()
@@ -52,14 +82,18 @@ fn main() -> Result<()> {
         .into_iter()
         .map(|(key, value)| (key.into(), Value::Str(value.into())))
         .collect::<Dict>();
-    let world = ProjectWorld::new(root, entry, inputs)?;
-    let evaluated = eval(&world);
-    for warning in evaluated.warnings {
+    let mut runtime = Runtime::new(root)?;
+    let evaluation = runtime.evaluate(entry, inputs)?;
+    for warning in &evaluation.result.warnings {
         eprintln!("warning: {}", warning.message);
     }
 
-    let output = evaluated.output?;
-    serde_json::to_writer_pretty(std::io::stdout(), &output)?;
+    let output = evaluation
+        .result
+        .output
+        .as_ref()
+        .map_err(|error| anyhow::anyhow!("{error:#}"))?;
+    serde_json::to_writer_pretty(std::io::stdout(), output)?;
     println!();
     Ok(())
 }

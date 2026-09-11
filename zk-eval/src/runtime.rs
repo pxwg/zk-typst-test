@@ -1,0 +1,65 @@
+use std::path::Path;
+use std::sync::Arc;
+
+use anyhow::Result;
+use typst::diag::Warned;
+use typst::foundations::{Dict, Value};
+
+use crate::{ProjectWorld, SourceSnapshot, eval};
+
+/// One completed attempt, successful or not, with its original source provenance.
+/// Retaining this value keeps ordinary Typst Content spans usable after edits.
+pub struct Evaluation {
+    pub revision: u64,
+    pub result: Warned<Result<Value>>,
+    pub sources: SourceSnapshot,
+}
+
+/// A single project's long-lived evaluator. Requests are evaluated sequentially.
+pub struct Runtime {
+    world: ProjectWorld,
+    revision: u64,
+    latest: Option<Arc<Evaluation>>,
+}
+
+impl Runtime {
+    pub fn new(root: impl AsRef<Path>) -> Result<Self> {
+        // The placeholder does not need to exist; evaluate() selects the entry.
+        let world = ProjectWorld::new(root, "main.typ", Dict::new())?;
+        Ok(Self {
+            world,
+            revision: 0,
+            latest: None,
+        })
+    }
+
+    /// Read current disk files and evaluate an entry. Inputs replace the previous
+    /// request's inputs; an empty dictionary resets them.
+    ///
+    /// Invalid configuration returns an outer error without advancing revision.
+    /// Compilation/announcement errors are stored in the returned evaluation and
+    /// replace latest just like successful attempts. Old success is never reused
+    /// as a substitute for a failed attempt.
+    ///
+    /// Typst's process-wide cache is aged after each attempt, retaining recently
+    /// used entries for ten rounds. This also ages caches of other Typst users in
+    /// the same process, but does not invalidate any retained Evaluation values.
+    pub fn evaluate(&mut self, entry: impl AsRef<Path>, inputs: Dict) -> Result<Arc<Evaluation>> {
+        self.world.prepare(entry, inputs)?;
+        self.revision += 1;
+        let result = eval(&self.world);
+        let sources = self.world.snapshot();
+        let evaluation = Arc::new(Evaluation {
+            revision: self.revision,
+            result,
+            sources,
+        });
+        self.latest = Some(evaluation.clone());
+        typst::comemo::evict(10);
+        Ok(evaluation)
+    }
+
+    pub fn latest(&self) -> Option<&Arc<Evaluation>> {
+        self.latest.as_ref()
+    }
+}

@@ -10,7 +10,8 @@ use crate::world::ProjectWorld;
 const ANNOUNCEMENT_LABEL: &str = "eval.announcement";
 const INSPECT_LABEL: &str = "eval.inspect";
 
-/// Evaluate the Typst entry point and return announcements grouped by tag.
+/// Evaluate the prepared world and return announcements grouped by tag.
+/// Call `ProjectWorld::prepare` before another evaluation, or use `Runtime`.
 pub fn eval(world: &ProjectWorld) -> Warned<Result<Value>> {
     let compiled = typst::compile::<PagedDocument>(world);
     let output = compiled
