@@ -6,6 +6,7 @@
 #import "../metadata.typ": zk_metadata_lifecycle
 #import "rules/code-actions.typ" as code-actions
 #import "rules/diagnostics.typ" as diagnostics
+#import "rules/navigation.typ" as navigation
 
 #let diagnostic-reports = diagnostics.zk_diagnostic_reports
 #let code-action-reports = code-actions.zk_quick_fix_reports
@@ -27,4 +28,5 @@
     graph-state,
     lifecycle: lifecycle,
   ),
+  navigation-targets: navigation.targets(graph-state),
 )

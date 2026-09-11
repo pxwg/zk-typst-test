@@ -9,6 +9,8 @@
 #let effect-kinds = (
   publish-diagnostics: label("lsp.publish-diagnostics"),
   code-actions: label("lsp.code-actions"),
+  hover: label("lsp.hover"),
+  definition: label("lsp.definition"),
 )
 
 #let severity = (
@@ -187,6 +189,33 @@
   data: action.data,
 )
 
+// Plain text is enough for the POC; presentation stays on the Typst side too.
+#let display-value(value) = {
+  if type(value) == content {
+    let fields = value.fields()
+    if repr(value.func()) == "space" { " " }
+    else if value.func() in (linebreak, parbreak) { "\n" }
+    else if "text" in fields { fields.text }
+    else if "children" in fields { fields.children.map(display-value).join() }
+    else if "body" in fields { display-value(fields.body) }
+    else { repr(value) }
+  } else if type(value) == array {
+    value.map(display-value).join(", ")
+  } else if type(value) in (str, label) {
+    str(value)
+  } else {
+    repr(value)
+  }
+}
+
+#let hover-contents(node) = (
+  kind: "plaintext",
+  value: display-value(node.title) + "\n@" + str(node.id) + "\n\n"
+    + node.metadata.keys().sorted().map(key => (
+      key + ": " + display-value(node.metadata.at(key))
+    )).join("\n"),
+)
+
 /// Adapt project-level rule reports to LSP values and announce complete
 /// document-scoped publications. Empty report arrays are announced so a host
 /// can clear stale diagnostics and code actions.
@@ -197,6 +226,7 @@
 /// (
 ///   diagnostic-reports: array,
 ///   code-action-reports: array,
+///   navigation-targets: array,
 /// )
 /// ```
 ///
@@ -217,6 +247,17 @@
   }
   if type(source) != str {
     panic("LSP diagnostic source must be a string")
+  }
+
+  for target in result.at("navigation-targets", default: ()) {
+    eval.announce(effect-kinds.hover, (
+      applies-to: eval.inspect(target.origin),
+      contents: hover-contents(target.node),
+    ))
+    eval.announce(effect-kinds.definition, (
+      applies-to: eval.inspect(target.origin),
+      target: eval.inspect(target.definition),
+    ))
   }
 
   for report in diagnostic-reports {
