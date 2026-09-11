@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fs;
 use std::ops::Range;
 use std::path::{Component, Path, PathBuf};
@@ -22,6 +22,7 @@ pub struct ProjectWorld {
     book: LazyHash<FontBook>,
     fonts: Vec<FontSlot>,
     slots: Mutex<HashMap<FileId, FileSlot>>,
+    overrides: HashMap<FileId, Bytes>,
 }
 
 impl ProjectWorld {
@@ -44,6 +45,7 @@ impl ProjectWorld {
             book: LazyHash::new(fonts.book),
             fonts: fonts.fonts,
             slots: Mutex::new(HashMap::new()),
+            overrides: HashMap::new(),
         })
     }
 
@@ -53,8 +55,24 @@ impl ProjectWorld {
     /// files that previously failed to load. Inputs replace, rather than merge
     /// with, the previous inputs. Invalid entries leave the world unchanged.
     pub fn prepare(&mut self, entry: impl AsRef<Path>, inputs: Dict) -> Result<()> {
+        self.prepare_with_sources(entry, inputs, BTreeMap::new())
+    }
+
+    /// Replace the complete in-memory source set for this evaluation. Omitted
+    /// files fall back to disk, including files whose buffers were closed.
+    pub fn prepare_with_sources(
+        &mut self,
+        entry: impl AsRef<Path>,
+        inputs: Dict,
+        sources: BTreeMap<PathBuf, String>,
+    ) -> Result<()> {
         let main = entry_id(entry.as_ref())?;
+        let overrides = sources
+            .into_iter()
+            .map(|(path, text)| Ok((entry_id(&path)?, Bytes::new(text.into_bytes()))))
+            .collect::<Result<_>>()?;
         self.main = main;
+        self.overrides = overrides;
         if self.inputs != inputs {
             self.library = LazyHash::new(Library::builder().with_inputs(inputs.clone()).build());
             self.inputs = inputs;
@@ -99,11 +117,15 @@ impl ProjectWorld {
         let mut slots = self.slots.lock().unwrap();
         let slot = slots.entry(id).or_default();
         if !slot.accessed {
-            let bytes = self.path_for(id).and_then(|path| {
-                fs::read(&path)
-                    .map(Bytes::new)
-                    .map_err(|error| FileError::from_io(error, &path))
-            });
+            let bytes = if let Some(bytes) = self.overrides.get(&id) {
+                Ok(bytes.clone())
+            } else {
+                self.path_for(id).and_then(|path| {
+                    fs::read(&path)
+                        .map(Bytes::new)
+                        .map_err(|error| FileError::from_io(error, &path))
+                })
+            };
             if slot.bytes.as_ref() != Some(&bytes) {
                 slot.source_stale = true;
                 slot.bytes = Some(bytes);

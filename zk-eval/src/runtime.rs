@@ -1,4 +1,5 @@
-use std::path::Path;
+use std::collections::BTreeMap;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -45,7 +46,18 @@ impl Runtime {
     /// used entries for ten rounds. This also ages caches of other Typst users in
     /// the same process, but does not invalidate any retained Evaluation values.
     pub fn evaluate(&mut self, entry: impl AsRef<Path>, inputs: Dict) -> Result<Arc<Evaluation>> {
-        self.world.prepare(entry, inputs)?;
+        self.evaluate_with_sources(entry, inputs, BTreeMap::new())
+    }
+
+    /// Evaluate with a complete set of project-relative source overrides.
+    /// Source text is input, not an instruction to write files to disk.
+    pub fn evaluate_with_sources(
+        &mut self,
+        entry: impl AsRef<Path>,
+        inputs: Dict,
+        sources: BTreeMap<PathBuf, String>,
+    ) -> Result<Arc<Evaluation>> {
+        self.world.prepare_with_sources(entry, inputs, sources)?;
         self.revision += 1;
         let result = eval(&self.world);
         let sources = self.world.snapshot();

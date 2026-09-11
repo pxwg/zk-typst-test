@@ -1,9 +1,9 @@
 use anyhow::{Context, Result, anyhow, bail};
-use typst::{World, WorldExt};
 use typst::diag::Warned;
 use typst::foundations::{Array, Content, Dict, Label, NativeElement, Selector, Value};
 use typst::introspection::MetadataElem;
 use typst::layout::PagedDocument;
+use typst::{World, WorldExt};
 
 use crate::world::ProjectWorld;
 

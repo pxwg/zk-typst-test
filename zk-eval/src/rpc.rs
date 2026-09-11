@@ -139,6 +139,9 @@ struct EvalParams {
     entry: PathBuf,
     #[serde(default)]
     inputs: BTreeMap<String, String>,
+    /// Complete in-memory source set; all other files are read from disk.
+    #[serde(default)]
+    sources: BTreeMap<PathBuf, String>,
 }
 
 fn evaluate(id: Value, params: Value, runtime: &Mutex<Runtime>) -> Value {
@@ -156,10 +159,12 @@ fn evaluate(id: Value, params: Value, runtime: &Mutex<Runtime>) -> Value {
         .collect::<Dict>();
     // Only evaluation holds the lock, not waiting for requests or writing output.
     let evaluation = match runtime.lock() {
-        Ok(mut runtime) => match runtime.evaluate(params.entry, inputs) {
-            Ok(evaluation) => evaluation,
-            Err(reason) => return error(id, -32602, &reason.to_string(), Value::Null),
-        },
+        Ok(mut runtime) => {
+            match runtime.evaluate_with_sources(params.entry, inputs, params.sources) {
+                Ok(evaluation) => evaluation,
+                Err(reason) => return error(id, -32602, &reason.to_string(), Value::Null),
+            }
+        }
         Err(_) => return error(id, -32603, "Evaluator is unavailable", Value::Null),
     };
     let warnings: Vec<_> = evaluation
