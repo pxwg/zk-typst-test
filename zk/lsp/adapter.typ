@@ -4,7 +4,7 @@
 // boundary. It does not know how project graph rules derive diagnostics or
 // code actions.
 
-#import "../eval.typ" as eval
+#import "../core/eval.typ" as eval
 
 #let effect-kinds = (
   publish-diagnostics: label("lsp.publish-diagnostics"),
@@ -193,12 +193,13 @@
 #let display-value(value) = {
   if type(value) == content {
     let fields = value.fields()
-    if repr(value.func()) == "space" { " " }
-    else if value.func() in (linebreak, parbreak) { "\n" }
-    else if "text" in fields { fields.text }
-    else if "children" in fields { fields.children.map(display-value).join() }
-    else if "body" in fields { display-value(fields.body) }
-    else { repr(value) }
+    if repr(value.func()) == "space" { " " } else if (
+      value.func() in (linebreak, parbreak)
+    ) { "\n" } else if "text" in fields { fields.text } else if (
+      "children" in fields
+    ) { fields.children.map(display-value).join() } else if "body" in fields {
+      display-value(fields.body)
+    } else { repr(value) }
   } else if type(value) == array {
     value.map(display-value).join(", ")
   } else if type(value) in (str, label) {
@@ -210,10 +211,18 @@
 
 #let hover-contents(node) = (
   kind: "plaintext",
-  value: display-value(node.title) + "\n@" + str(node.id) + "\n\n"
-    + node.metadata.keys().sorted().map(key => (
-      key + ": " + display-value(node.metadata.at(key))
-    )).join("\n"),
+  value: display-value(node.title)
+    + "\n@"
+    + str(node.id)
+    + "\n\n"
+    + node
+      .metadata
+      .keys()
+      .sorted()
+      .map(key => (
+        key + ": " + display-value(node.metadata.at(key))
+      ))
+      .join("\n"),
 )
 
 /// Adapt project-level rule reports to LSP values and announce complete
